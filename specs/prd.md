@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary]
+stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary, step-03-success]
 classification:
   projectType: cli_tool
   domain: fintech_demo
@@ -39,3 +39,50 @@ The result is a user experience improvement at two levels: the application raise
 | Domain | Banking (fintech demo scope — no compliance, auth, or persistence requirements) |
 | Complexity | Low — 4 operations, in-memory storage, ~200 LOC baseline |
 | Project Context | Brownfield — migrating existing Java codebase; Java tests define baseline behaviour |
+
+## Success Criteria
+
+### User Success
+
+- The CLI starts and runs with a single command: `uv run bank`
+- All 4 operations work identically to the Java version: create account, deposit, withdraw, display accounts
+- Invalid input produces specific, user-readable error messages (e.g., *"Balance must be 0 or greater"*, not *"Error: balance cannot be negative"*)
+- Account number format is validated at creation time — malformed numbers are rejected with guidance
+- Deposit and withdrawal amounts are validated (must be positive)
+
+### Technical Success
+
+- All Java test scenarios have passing pytest equivalents
+- `ruff check src/` passes with zero PEP 8 violations
+- `mypy --strict src/` passes with zero type errors
+- Every business rule is expressed as a Pydantic field constraint or validator — no manual `if` guards in constructors
+- Test coverage ≥ 90% (`pytest --cov`)
+
+### Migration Success
+
+- The Python codebase reproduces 100% of the Java application's behaviour
+- Validation gaps identified in the technical research are closed: deposit amount, account number format, owner name
+- Architecture improvements are implemented: Repository pattern, typed exception hierarchy, Protocol-based service interface
+
+### Measurable Outcomes
+
+| Metric | Target |
+|--------|--------|
+| Java test parity | 4/4 scenarios pass in pytest |
+| New validation rules added | ≥ 3 (deposit amount, account number format, owner name) |
+| PEP 8 violations | 0 |
+| Type check errors | 0 |
+| Test coverage | ≥ 90% |
+
+## Product Scope
+
+### MVP — Minimum Viable Product
+
+- Python 3.12+ console application reproducing all Java BMS functionality
+- `Account` as Pydantic `BaseModel` with declarative field validation
+- `BankService` Protocol + `BankServiceImpl` with `InMemoryAccountRepository`
+- `BankingConsole` with `input()` + `match/case` menu loop
+- Typed exception hierarchy with specific error messages
+- Validation of amounts (positive), account number format, and owner name (non-empty)
+- Full pytest suite mirroring Java tests + new validation tests
+- PEP 8 compliant, type-checked, linted codebase
