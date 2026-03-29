@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1, 2, 3, 4]
+stepsCompleted: [1, 2, 3, 4, 5]
 inputDocuments:
   - specs/prd.md
   - docs/BankManagementSystem/README.md
@@ -174,3 +174,90 @@ The CLI is the only place where error message text is authored. No other layer f
 - `exceptions.py` is imported by `service.py`, `cli.py`
 - `repository.py` protocol is imported by `service.py`
 - `cli.py` imports everything — it is the composition root
+
+## Implementation Patterns & Consistency Rules
+
+### Pattern Categories Defined
+
+**Critical Conflict Points Identified:**
+6 areas where AI agents could make incompatible choices.
+
+### Naming & Format Patterns
+
+**Python Naming:**
+- PEP 8 throughout: `snake_case` for functions, methods, variables, modules; `PascalCase` for classes and type aliases
+- Enforced by `ruff check` — no separate convention needed
+
+**JSON Persistence Format:**
+- Field names match Python attribute names exactly (Pydantic default)
+- No aliases, no `by_alias=True`, no `serialization_alias`
+- Example: `{"account_number": "001", "owner": "Ali", "balance": 500.0}`
+
+**Error Message Format:**
+- Domain exceptions: `"{What failed}: {context with values}."`
+  - Example: `"Insufficient balance: cannot withdraw 800.00 from account 001 (current balance: 300.00)."`
+- No `"Error:"` prefix in exception messages — the CLI layer decides presentation
+- Amounts formatted to 2 decimal places
+- Pydantic validation messages: use built-in wording; CLI strips `"Value error, "` prefix when displaying
+
+**CLI Output Format:**
+- `show-accounts`: plain-text table with aligned columns (Account Number, Owner, Balance)
+- Empty state: `"No accounts found."`
+- Mutation success: single sentence — `"Account created successfully."`, `"Deposit successful."`, `"Withdrawal successful."`
+
+### Structure Patterns
+
+**Test Organization:**
+```
+tests/
+├── __init__.py
+├── test_model.py
+├── test_service.py
+├── test_repository.py
+├── test_cli.py
+└── conftest.py
+```
+- One test file per source module, prefixed with `test_`
+- Shared fixtures (sample accounts, temp JSON files) in `conftest.py`
+
+**Import Style:**
+- Always absolute imports from package root: `from bank.model import Account`
+- No relative imports
+
+### Interface Patterns
+
+**Repository Protocol:**
+```python
+class AccountRepository(Protocol):
+    def find_all(self) -> list[Account]: ...
+    def find_by_id(self, account_number: str) -> Account | None: ...
+    def save(self, account: Account) -> None: ...
+    def exists(self, account_number: str) -> bool: ...
+```
+- `find_by_id` returns `None` if not found (no exception at repository level)
+- Service layer raises `AccountNotFoundError` when needed
+
+**BankService Protocol:**
+```python
+class BankService(Protocol):
+    def create_account(self, account_number: str, owner: str, initial_balance: float) -> Account: ...
+    def deposit(self, account_number: str, amount: float) -> Account: ...
+    def withdraw(self, account_number: str, amount: float) -> Account: ...
+    def get_all_accounts(self) -> list[Account]: ...
+```
+- All mutation methods return the updated `Account`
+- Validation and business rule exceptions raised before any state change
+
+### Enforcement Guidelines
+
+**All AI Agents MUST:**
+- Run `ruff check src/` and `mypy --strict src/` before considering a story complete
+- Follow the Protocol signatures exactly — no renaming, no reordering parameters
+- Use the error message format defined above — no ad-hoc wording
+- Place tests in the corresponding `test_*.py` file
+
+**Anti-Patterns:**
+- ❌ `from .model import Account` (relative import)
+- ❌ `model_dump(by_alias=True)` (alias serialization)
+- ❌ `raise AccountNotFoundError(...)` inside repository (repository returns None)
+- ❌ `print("Error: ...")` in service layer (only CLI formats output)
