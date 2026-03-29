@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary, step-03-success, step-04-journeys, step-05-domain-skipped, step-06-innovation-skipped]
+stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary, step-03-success, step-04-journeys, step-05-domain-skipped, step-06-innovation-skipped, step-07-project-type]
 classification:
   projectType: cli_tool
   domain: fintech_demo
@@ -35,7 +35,7 @@ The result is a user experience improvement at two levels: the application raise
 
 | Attribute | Value |
 |-----------|-------|
-| Project Type | CLI tool — interactive console, numbered menu, `input()` / `match/case` |
+| Project Type | CLI tool — argument-based commands via `typer`, with built-in `--help` |
 | Domain | Banking (fintech demo scope — no compliance, auth, or persistence requirements) |
 | Complexity | Low — 4 operations, in-memory storage, ~200 LOC baseline |
 | Project Context | Brownfield — migrating existing Java codebase; Java tests define baseline behaviour |
@@ -81,7 +81,7 @@ The result is a user experience improvement at two levels: the application raise
 - Python 3.12+ console application reproducing all Java BMS functionality
 - `Account` as Pydantic `BaseModel` with declarative field validation
 - `BankService` Protocol + `BankServiceImpl` with `InMemoryAccountRepository`
-- `BankingConsole` with `input()` + `match/case` menu loop
+- `typer`-based CLI with argument commands: `create-account`, `deposit`, `withdraw`, `show-accounts`
 - Typed exception hierarchy with specific error messages
 - Validation of amounts (positive), account number format, and owner name (non-empty)
 - Full pytest suite mirroring Java tests + new validation tests
@@ -91,17 +91,17 @@ The result is a user experience improvement at two levels: the application raise
 
 ### Persona: Sam, the CLI Operator
 
-Sam is a developer or technical user who runs the Bank Management System from a terminal. They expect a responsive, predictable console interface that tells them clearly what went wrong when they make a mistake.
+Sam is a developer or technical user who runs the Bank Management System from a terminal. They expect a modern CLI with discoverable commands, type-safe arguments, and clear feedback when something goes wrong.
 
 ---
 
-### Journey 1: First-Time Setup and Account Creation
+### Journey 1: First-Time Setup and Discovery
 
-**Opening:** Sam clones the project and runs `uv sync && uv run bank`. The application starts instantly — no JDK, no classpath, no build step.
+**Opening:** Sam clones the project and runs `uv sync`. Then `uv run bank --help` — the CLI prints all available commands with descriptions. No guessing, no reading source code. Setup is instant — no JDK, no classpath, no build step.
 
-**Action:** Sam selects "1. Create Account", enters an account number, owner name, and initial balance. The application confirms: *"Account created successfully."*
+**Action:** Sam runs `uv run bank create-account 001 Ali 500.0`. The application confirms: *"Account created successfully."*
 
-**Resolution:** Sam selects "4. Display Accounts" and sees their new account listed with formatted balance. They trust the system is working.
+**Resolution:** Sam runs `uv run bank show-accounts` and sees the new account listed with formatted balance. They trust the system is working.
 
 ---
 
@@ -109,9 +109,9 @@ Sam is a developer or technical user who runs the Bank Management System from a 
 
 **Opening:** Sam has an existing account and wants to manage funds.
 
-**Action:** Sam deposits 500.00 into the account, then withdraws 200.00. Each operation confirms with a clear success message and the balance updates correctly.
+**Action:** Sam runs `uv run bank deposit 001 500.0`, then `uv run bank withdraw 001 200.0`. Each command confirms with a clear success message.
 
-**Resolution:** Sam displays all accounts and verifies the balance reflects both operations. The workflow feels fast and predictable.
+**Resolution:** `uv run bank show-accounts` shows the updated balance reflecting both operations. The workflow is fast, predictable, and scriptable.
 
 ---
 
@@ -120,21 +120,32 @@ Sam is a developer or technical user who runs the Bank Management System from a 
 **Opening:** Sam makes a series of input mistakes — this is where the Python rewrite diverges most from the Java original.
 
 **Scenario A — Overdraft attempt:**
-Sam tries to withdraw more than the balance. The Java version prints: `Error: Insufficient balance`. The Python version prints: *"Insufficient balance: cannot withdraw 800.00 from account 001 (current balance: 300.00)."*
+`uv run bank withdraw 001 800.0` — The Java version prints: `Error: Insufficient balance`. The Python version prints: *"Insufficient balance: cannot withdraw 800.00 from account 001 (current balance: 300.00)."*
 
 **Scenario B — Invalid account number format:**
-Sam enters `abc` as an account number. The Java version silently accepts it. The Python version rejects it: *"Account number must be a numeric string (e.g., '001')."*
+`uv run bank create-account abc Ali 500.0` — The Java version silently accepts it. The Python version rejects it: *"Account number must be a numeric string (e.g., '001')."*
 
 **Scenario C — Negative deposit:**
-Sam enters `-50` as a deposit amount. The Java version adds it (the balance decreases — a bug). The Python version rejects it: *"Deposit amount must be greater than 0."*
+`uv run bank deposit 001 -50` — The Java version adds it (the balance decreases — a bug). The Python version rejects it: *"Deposit amount must be greater than 0."*
 
 **Resolution:** Sam never has to guess what went wrong. Each error message names the field, states the rule, and implies the fix. This is the core UX improvement over the Java version.
 
 ---
 
-### Journey 4: Clean Exit
+### Journey 4: Help and Discoverability
 
-Sam selects "0. Exit". The application prints *"Thank you for using our Bank Service"* and terminates cleanly. No hanging processes, no unclosed resources.
+Sam forgets the command syntax. `uv run bank deposit --help` prints:
+```
+Usage: bank deposit [OPTIONS] ACCOUNT_NUMBER AMOUNT
+
+  Deposit funds into an account.
+
+Arguments:
+  ACCOUNT_NUMBER  [required]
+  AMOUNT          [required]
+```
+
+Every command is self-documenting — no manual needed.
 
 ---
 
@@ -142,7 +153,7 @@ Sam selects "0. Exit". The application prints *"Thank you for using our Bank Ser
 
 | Journey | Capabilities revealed |
 |---------|----------------------|
-| 1 — Setup & Create | Project runs via `uv run bank`; account creation with field validation |
+| 1 — Setup & Discovery | Project runs via `uv run bank`; `--help` on all commands; account creation with field validation |
 | 2 — Banking ops | Deposit and withdrawal with balance updates; account listing with formatted output |
 | 3 — Error recovery | Pydantic field-level error messages; account number format validation; amount positivity validation; overdraft protection with context |
-| 4 — Exit | Clean shutdown with farewell message |
+| 4 — Help | Built-in `--help` on every command via `typer` |

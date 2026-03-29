@@ -411,7 +411,7 @@ demo-migration-bms/
 └── README.md
 ```
 
-**CLI naming decision (ADR-002):** The Java `util/Menu.java` is renamed to `cli/console.py` with a `BankingConsole` class. `menu` is not a Python convention — `console` better reflects what the component is (a console interface). The interaction model is preserved: raw `input()` + `match/case` replaces `Scanner` + `switch`. A CLI modernisation with `typer` or `click` is noted as a future story.
+**CLI decision (ADR-002):** The Java `util/Menu.java` interactive loop is replaced by `typer`-based argument commands in `cli/app.py`. Each banking operation (`create-account`, `deposit`, `withdraw`, `show-accounts`) becomes a standalone CLI command with type-safe arguments and built-in `--help`.
 
 This maps directly to the Java package structure (`model`, `service`, `util→cli`, `exception`) while applying Python naming conventions.
 
@@ -455,14 +455,17 @@ _Source: [Clean Architecture with Python — Sam Keen, Packt 2025](https://www.o
   - ✅ Automatic `__init__`, `__repr__`, and `__eq__`
   - ⚠️ Domain layer has a dependency on `pydantic` — acceptable here, documented explicitly
 
-**ADR-002: Faithful CLI migration — raw `input()` over `typer`/`click`**
+**ADR-002: Modern CLI with `typer` — argument-based commands over interactive menu**
 
-- **Decision**: The console UI uses raw `input()` + `match/case`, not a CLI framework.
-- **Context**: The migration goal is to demonstrate the pipeline faithfully. Introducing `typer` adds scope and diverges from the Java interaction model.
+- **Decision**: The console UI uses `typer` with argument-based commands, replacing the Java interactive menu loop.
+- **Context**: The migration goal is to produce a *modern* Python application. `typer` aligns with Pydantic's type-hint philosophy, reduces boilerplate compared to a manual menu loop, and produces a professional CLI with built-in `--help`. The interaction model changes from a persistent menu to discrete commands — this is how Python CLI tools are built in 2026.
 - **Consequences**:
-  - ✅ Keeps scope controlled and traceable to Java original
-  - ✅ No additional dependencies beyond `pydantic`
-  - ⚠️ Less ergonomic than a framework CLI — noted as a future story
+  - ✅ Modern, professional CLI experience with `--help` on every command
+  - ✅ Type-safe arguments complement Pydantic's validation approach
+  - ✅ Less code than a manual `input()` + `match/case` loop
+  - ✅ Each command is an isolated function — easier to test
+  - ⚠️ Adds `typer` as a dependency (lightweight, built on `click`)
+  - ⚠️ Interaction model diverges from Java's numbered menu
 
 _Source: [Pragmatic Clean Architecture in Python — Deep Engineering](https://deepengineering.substack.com/p/pragmatic-clean-architecture-in-python)_
 
@@ -641,7 +644,7 @@ Each story has its own pytest tests as acceptance criteria. Stories 1-3 are inde
 |------|-----------|--------|-----------|
 | `double` → `float` precision drift | Low | Medium | Use `Decimal` if financial precision tests reveal rounding; document the choice |
 | Java `HashMap` silent overwrite vs Python duplicate check | Low | Low | Add explicit duplicate detection in story 3; covered by new test |
-| Scope creep (adding persistence, Typer, etc.) | Medium | Medium | ADR-002 explicitly defers these; flag any additions as separate stories |
+| Typer learning curve | Low | Low | Typer is well-documented, lightweight, and aligns with existing type-hint patterns |
 | PEP 8 regressions | Low | Low | `ruff check` in CI catches violations automatically |
 
 ---
@@ -657,7 +660,7 @@ Each story has its own pytest tests as acceptance criteria. Stories 1-3 are inde
 | Linting + formatting | `ruff` | PEP 8 enforcement, replaces flake8 + black |
 | Type checking | `mypy` (strict) | Catches type errors before runtime |
 | Testing | `pytest` | Direct JUnit 5 equivalent |
-| CLI interaction | `input()` + `match/case` | Faithful to Java original (ADR-002) |
+| CLI interaction | `typer` | Modern argument-based CLI (ADR-002) |
 
 ---
 
@@ -696,7 +699,7 @@ _Source: [Reimagining Code: Migrating from Java to Python — migrateto.net](htt
 
 5. **Use the Java tests as acceptance criteria** — the 4 existing Java tests map directly to pytest equivalents and define the minimum passing bar for the migration.
 
-6. **Document scope boundaries** — ADR-002 explicitly defers CLI modernisation (`typer`), persistence, and network exposure as future epics, out of scope for the initial sprint.
+6. **Document scope boundaries** — persistence (JSON/SQLite) and network exposure (FastAPI) remain out of scope for the initial sprint.
 
 ---
 
