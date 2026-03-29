@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1, 2]
+stepsCompleted: [1, 2, 3]
 inputDocuments:
   - specs/prd.md
   - docs/BankManagementSystem/README.md
@@ -52,3 +52,49 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 3. **CLI as error-translation boundary:** The CLI layer contains zero business logic. Its sole role beyond argument parsing is catching `ValidationError` (from Pydantic) and domain exceptions (from the service layer) and formatting them into user-readable sentences. This is the only place where error message text is authored.
 4. **Repository encapsulates persistence lifecycle:** The read-modify-write cycle is internal to `JsonFileAccountRepository`, not a cross-cutting concern. The service layer interacts through a clean interface (`find_all`, `find_by_id`, `save`) without knowing about the JSON file.
 5. **Serialization round-trip:** `Account.model_dump()` → JSON file → `Account.model_validate()`. Every field must survive this cycle without data loss or type coercion surprises.
+
+## Starter Template Evaluation
+
+### Primary Technology Domain
+
+Python CLI tool, based on project requirements analysis. No web, mobile, or API surface.
+
+### Starter Options Considered
+
+| Option | Approach | Verdict |
+|--------|----------|---------|
+| `uv init --app --package` | Minimal uv scaffold with src/ layout and entry point | **Selected** — right-sized for a low-complexity CLI |
+| Cookiecutter/Copier templates | Pre-configured CI, docs, Docker, linting | Rejected — too much scaffolding to strip for ~200 LOC |
+| Manual pyproject.toml | Write everything from scratch | Viable but `uv init` does the same thing faster |
+
+### Selected Starter: `uv init --app --package`
+
+**Rationale:** The project is a low-complexity CLI with 5 architectural components. A minimal scaffold that provides the `src/` layout and `[project.scripts]` entry point is the right foundation — anything heavier creates removal work rather than saving effort.
+
+**Initialization Command:**
+
+```bash
+uv init --app --package bank --python ">=3.12"
+```
+
+**Architectural Decisions Provided by Starter:**
+
+**Language & Runtime:**
+- Python 3.12+ with `src/` package layout
+- `uv_build` as build backend
+
+**Dependencies (added post-init):**
+- `pydantic >=2.12,<3` — model validation and JSON serialization
+- `typer >=0.24,<1` — CLI argument parsing and --help generation
+
+**Dev Tooling (added post-init):**
+- `pytest >=9,<10` + `pytest-cov` — test runner with coverage
+- `ruff >=0.15` — linting and formatting (PEP 8 gate)
+- `mypy >=1.19` — strict type checking gate
+
+**Code Organization:**
+- `src/bank/` — application package
+- `tests/` — test suite
+- Entry point: `bank = "bank.cli:app"`
+
+**Note:** Project initialization using this command should be the first implementation story.
