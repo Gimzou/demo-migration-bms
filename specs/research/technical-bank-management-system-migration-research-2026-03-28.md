@@ -115,11 +115,10 @@ _Confidence: High._
 The Java implementation uses **purely in-memory storage** (`HashMap<String, Account>`). There is no file I/O, no database, no serialisation.
 
 _Migration scope — storage layer:_
-- **Minimum viable (match Java):** Python `dict[str, Account]` injected into the service — identical semantics, zero persistence
-- **Improved option:** JSON file persistence via `json` stdlib + Pydantic `.model_dump()` / `.model_validate()` — adds durability with no extra dependencies
+- **MVP:** JSON file persistence (`accounts.json` in working directory) via `json` stdlib + Pydantic `.model_dump()` / `.model_validate()` — no extra dependencies. This is required because the `typer`-based CLI (ADR-002) runs each command as a separate process, so in-memory state does not survive between invocations.
 - **Future option:** SQLite via `sqlite3` stdlib or SQLAlchemy — out of scope for this migration
 
-_Recommendation:_ Replicate the in-memory dict for the initial migration to keep scope controlled. Pydantic's serialisation methods make adding persistence trivial as a follow-on story.
+_Recommendation:_ Use a local `accounts.json` file as the persistence backend. The Repository pattern abstracts this cleanly — `JsonFileAccountRepository` implements the same interface as an in-memory dict would, and Pydantic's built-in serialisation (`.model_dump()` / `.model_validate()`) makes the implementation trivial (~20 LOC). No account deletion or file management commands are needed for MVP; users can delete the file manually to reset state.
 
 _Confidence: High — storage scope is directly observable in `BankServiceImpl.java`._
 
@@ -397,10 +396,10 @@ demo-migration-bms/
 │       │   └── bank_service_impl.py # BankServiceImpl (in-memory)
 │       ├── repository/
 │       │   ├── __init__.py
-│       │   └── in_memory.py         # InMemoryAccountRepository
+│       │   └── json_file.py         # JsonFileAccountRepository (accounts.json)
 │       ├── cli/
 │       │   ├── __init__.py
-│       │   └── console.py           # BankingConsole (UI layer, raw input())
+│       │   └── app.py               # typer CLI (argument-based commands)
 │       └── exceptions.py            # Domain exception hierarchy
 ├── tests/
 │   ├── model/
@@ -466,6 +465,7 @@ _Source: [Clean Architecture with Python — Sam Keen, Packt 2025](https://www.o
   - ✅ Each command is an isolated function — easier to test
   - ⚠️ Adds `typer` as a dependency (lightweight, built on `click`)
   - ⚠️ Interaction model diverges from Java's numbered menu
+  - ⚠️ Each command runs as a separate process — requires file-based persistence (JSON) instead of in-memory storage. See Storage Technologies section.
 
 _Source: [Pragmatic Clean Architecture in Python — Deep Engineering](https://deepengineering.substack.com/p/pragmatic-clean-architecture-in-python)_
 
@@ -487,7 +487,7 @@ This is a **local console application** — scalability in the distributed-syste
 | Storage | `HashMap<String, Account>` (instance variable) | `dict[str, Account]` (injected `InMemoryAccountRepository`) |
 | Lookup key | `String accountNumber` | `str` account number |
 | No-duplicate enforcement | Implicit (HashMap overwrites) | Same — `dict` overwrites on same key; add explicit duplicate check |
-| Persistence | None | None (same scope) — `model_dump()` makes JSON export trivial as a future story |
+| Persistence | None (in-memory session) | `accounts.json` via Pydantic serialisation — required by `typer`'s per-command process model |
 
 **Notable improvement:** The Java `BankServiceImpl` stores accounts as a direct instance variable. The Python design extracts this into a separate `InMemoryAccountRepository` — following the **Repository pattern**. The service layer has no knowledge of *how* data is stored, only that it can `save`, `find_by_id`, and `list_all`. Swapping in a file-based or SQL-backed repository requires zero changes to the service.
 

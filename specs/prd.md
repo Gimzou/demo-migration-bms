@@ -1,5 +1,9 @@
 ---
-stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary, step-03-success, step-04-journeys, step-05-domain-skipped, step-06-innovation-skipped, step-07-project-type]
+stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary, step-03-success, step-04-journeys, step-05-domain-skipped, step-06-innovation-skipped, step-07-project-type, step-e-01-discovery, step-e-02-review, step-e-03-edit]
+lastEdited: '2026-03-29'
+editHistory:
+  - date: '2026-03-29'
+    changes: 'Coherence fixes (persistence refs, CLI model), added Functional Requirements (FR-1–6) and Non-Functional Requirements (NFR-1–6)'
 classification:
   projectType: cli_tool
   domain: fintech_demo
@@ -21,7 +25,7 @@ projectDocsCount: 1
 
 ## Executive Summary
 
-The Bank Management System (BMS) is a Python rewrite of an existing Java console banking application. The rewrite replaces imperative, scattered validation with declarative, framework-enforced business rules using Pydantic v2. The end-users are operators of the CLI who interact with a numbered-menu interface to create accounts, deposit, withdraw, and view balances.
+The Bank Management System (BMS) is a Python rewrite of an existing Java console banking application. The rewrite replaces imperative, scattered validation with declarative, framework-enforced business rules using Pydantic v2. The end-users are operators of the CLI who invoke argument-based commands to create accounts, deposit, withdraw, and view balances.
 
 The Java predecessor is functionally complete but architecturally weak on validation: business rules (`balance ≥ 0`, `amount ≤ balance`) are buried in constructor guards with no validation on deposit amounts, account number format, or owner name. A single catch-all exception handler obscures all error distinctions. The Python rewrite corrects these gaps, improves user-facing error feedback, and delivers a codebase that is easier to set up, run, and extend.
 
@@ -36,8 +40,8 @@ The result is a user experience improvement at two levels: the application raise
 | Attribute | Value |
 |-----------|-------|
 | Project Type | CLI tool — argument-based commands via `typer`, with built-in `--help` |
-| Domain | Banking (fintech demo scope — no compliance, auth, or persistence requirements) |
-| Complexity | Low — 4 operations, in-memory storage, ~200 LOC baseline |
+| Domain | Banking (fintech demo scope — no compliance or auth requirements) |
+| Complexity | Low — 4 operations, JSON file persistence, ~200 LOC baseline |
 | Project Context | Brownfield — migrating existing Java codebase; Java tests define baseline behaviour |
 
 ## Success Criteria
@@ -80,7 +84,7 @@ The result is a user experience improvement at two levels: the application raise
 
 - Python 3.12+ console application reproducing all Java BMS functionality
 - `Account` as Pydantic `BaseModel` with declarative field validation
-- `BankService` Protocol + `BankServiceImpl` with `InMemoryAccountRepository`
+- `BankService` Protocol + `BankServiceImpl` with `JsonFileAccountRepository`
 - `typer`-based CLI with argument commands: `create-account`, `deposit`, `withdraw`, `show-accounts`
 - Typed exception hierarchy with specific error messages
 - Validation of amounts (positive), account number format, and owner name (non-empty)
@@ -157,3 +161,149 @@ Every command is self-documenting — no manual needed.
 | 2 — Banking ops | Deposit and withdrawal with balance updates; account listing with formatted output |
 | 3 — Error recovery | Pydantic field-level error messages; account number format validation; amount positivity validation; overdraft protection with context |
 | 4 — Help | Built-in `--help` on every command via `typer` |
+
+## CLI Tool Specific Requirements
+
+### Command Structure
+
+The CLI uses `typer` with a flat command hierarchy — no nested subcommands. Each banking operation is a top-level command.
+
+| Command | Arguments | Description |
+|---------|-----------|-------------|
+| `create-account` | `ACCOUNT_NUMBER`, `OWNER`, `INITIAL_BALANCE` | Create a new account with validated fields |
+| `deposit` | `ACCOUNT_NUMBER`, `AMOUNT` | Deposit a positive amount into an existing account |
+| `withdraw` | `ACCOUNT_NUMBER`, `AMOUNT` | Withdraw from an account if sufficient balance |
+| `show-accounts` | *(none)* | List all accounts with formatted balances |
+
+All arguments are positional and required (no optional flags beyond `--help`). `typer` derives argument types from Python type hints — `AMOUNT` is `float`, `ACCOUNT_NUMBER` and `OWNER` are `str`.
+
+### Output Formats
+
+The CLI outputs plain text to stdout. No JSON or structured output mode is planned for MVP.
+
+- **Success messages:** Short confirmation sentences (e.g., *"Account created successfully."*)
+- **Error messages:** Pydantic validation errors are caught and reformatted into user-readable sentences. The raw Pydantic `ValidationError` detail is never shown to the user.
+- **Account listing:** Tabular text output with columns: account number, owner, balance (formatted to 2 decimal places)
+
+### Persistence
+
+Each `typer` command runs as a separate process, so state must survive between invocations. The CLI persists accounts to a local `accounts.json` file in the working directory.
+
+- The file is created automatically on the first write (no setup step required)
+- Each command reads the file at start, performs its operation, and writes back
+- Pydantic's built-in serialisation (`.model_dump()` / `.model_validate()`) handles the JSON round-trip — no extra dependencies
+- To reset all data, the user deletes the file manually (`rm accounts.json`)
+- No account deletion or file management commands are in MVP scope
+
+The Repository pattern abstracts this: `JsonFileAccountRepository` implements the same interface as an in-memory store would. The service layer has no knowledge of how or where data is persisted.
+
+### Configuration
+
+No configuration files, environment variables, or dotfiles. The JSON data file location is implicit (current working directory). This is intentional for a demo-scope CLI.
+
+### Scripting Support
+
+Commands are stateless and argument-driven, which makes them scriptable:
+
+```bash
+uv run bank create-account 001 Ali 500.0
+uv run bank deposit 001 200.0
+uv run bank show-accounts
+```
+
+Because state persists to `accounts.json`, commands compose naturally in shell scripts. Shell completion is available via `typer`'s built-in `--install-completion`.
+
+## Functional Requirements
+
+Each FR traces to one or more User Journeys (J1–J4) and is testable via pytest.
+
+### FR-1: Account Creation (J1, J3)
+
+Users can create a bank account by providing an account number, owner name, and initial balance. The system validates all three fields at creation time:
+
+- Account number must be a non-empty numeric string (e.g., `"001"`)
+- Owner name must be a non-empty string
+- Initial balance must be ≥ 0
+
+If any field is invalid, the command fails with a field-specific error message naming the rule that was violated. If the account number already exists, the command fails with a duplicate account error.
+
+**Acceptance criteria:** Account is persisted to `accounts.json` and visible in `show-accounts`. Invalid inputs are rejected with specific messages — one per violated rule.
+
+### FR-2: Deposit (J2, J3)
+
+Users can deposit funds into an existing account. The deposit amount must be strictly greater than 0. The system rejects zero and negative amounts with a specific error message.
+
+**Acceptance criteria:** Account balance increases by exactly the deposited amount. Updated balance is persisted immediately. Non-existent account numbers produce an "account not found" error.
+
+### FR-3: Withdrawal (J2, J3)
+
+Users can withdraw funds from an existing account. The withdrawal amount must be strictly greater than 0 and must not exceed the current balance. The system rejects overdrafts with a message that includes the current balance and the attempted amount.
+
+**Acceptance criteria:** Account balance decreases by exactly the withdrawn amount. Updated balance is persisted immediately. Overdraft attempts are rejected without modifying the balance.
+
+### FR-4: Account Listing (J1, J2)
+
+Users can display all existing accounts. Each account is shown with its account number, owner name, and balance formatted to 2 decimal places. If no accounts exist, the output states that explicitly.
+
+**Acceptance criteria:** All persisted accounts are listed. Output is human-readable tabular text.
+
+### FR-5: Command Discoverability (J1, J4)
+
+Every command supports `--help`, displaying its name, description, and required arguments. The root command (`uv run bank --help`) lists all available commands.
+
+**Acceptance criteria:** `--help` output includes argument names and types for each command.
+
+### FR-6: Data Persistence Across Commands (J1, J2)
+
+Accounts created or modified by one command invocation are available to subsequent commands. Data is stored in `accounts.json` in the working directory. The file is created on first write and read on every command start.
+
+**Acceptance criteria:** A `create-account` followed by a separate `show-accounts` invocation displays the created account.
+
+### Functional Requirements Traceability
+
+| FR | J1 Setup | J2 Banking | J3 Errors | J4 Help |
+|----|----------|------------|-----------|---------|
+| FR-1 Account Creation | x | | x | |
+| FR-2 Deposit | | x | x | |
+| FR-3 Withdrawal | | x | x | |
+| FR-4 Account Listing | x | x | | |
+| FR-5 Discoverability | x | | | x |
+| FR-6 Persistence | x | x | | |
+
+## Non-Functional Requirements
+
+### NFR-1: Code Quality — PEP 8 Compliance
+
+`ruff check src/` produces zero violations. All Python source files follow PEP 8 naming conventions (`snake_case` functions, `PascalCase` classes).
+
+**Measurement:** `ruff check src/` exit code 0.
+
+### NFR-2: Type Safety
+
+`mypy --strict src/` produces zero type errors. All function signatures include type annotations. Pydantic models provide runtime type enforcement.
+
+**Measurement:** `mypy --strict src/` exit code 0.
+
+### NFR-3: Test Coverage
+
+Test suite covers ≥ 90% of source lines. Every FR has at least one corresponding pytest test. All Java test scenarios have pytest equivalents.
+
+**Measurement:** `pytest --cov` reports ≥ 90% coverage.
+
+### NFR-4: Validation Architecture
+
+Every business rule (balance ≥ 0, amount > 0, account number format, owner non-empty) is expressed as a Pydantic `Field` constraint or `@field_validator` — not as a manual `if` guard in application code.
+
+**Measurement:** No `if` guards for input validation exist outside Pydantic model definitions.
+
+### NFR-5: Error Message Quality
+
+All user-facing error messages name the specific field, state the violated rule, and imply the corrective action. Raw Pydantic `ValidationError` tracebacks are never shown to the user.
+
+**Measurement:** Each error scenario in the test suite asserts on the message content, not just the exception type.
+
+### NFR-6: Zero-Setup Experience
+
+The project runs with `uv sync` followed by `uv run bank <command>`. No manual dependency installation, virtual environment creation, or configuration steps required.
+
+**Measurement:** A clean clone + `uv sync` + `uv run bank --help` succeeds on Python 3.12+.
