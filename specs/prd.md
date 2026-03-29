@@ -33,7 +33,7 @@ The Java predecessor is functionally complete but architecturally weak on valida
 
 Pydantic v2 is not introduced as a convenience layer — it is the architectural foundation. By defining `Account` as a `pydantic.BaseModel` with `Field` constraints and `@field_validator` rules, business rules become the schema: declared once, enforced everywhere, visible to any reader of the code, and verifiable by the test suite. This shifts the BMS from a system where correctness is the developer's responsibility to one where correctness is enforced by the framework.
 
-The result is a user experience improvement at two levels: the application raises specific, meaningful errors (not generic exceptions), and the codebase communicates its own rules without requiring a developer to trace through imperative logic.
+This improves UX at two levels: the application raises specific, meaningful errors (not generic exceptions), and the codebase communicates its own rules without requiring a developer to trace through imperative logic.
 
 ## Project Classification
 
@@ -65,7 +65,7 @@ The result is a user experience improvement at two levels: the application raise
 ### Migration Success
 
 - The Python codebase reproduces 100% of the Java application's behaviour
-- Validation gaps identified in the technical research are closed: deposit amount, account number format, owner name
+- Validation gaps identified in the technical research are closed: deposit amount, withdrawal amount, account number format, owner name, duplicate account detection
 - Architecture improvements are implemented: Repository pattern, typed exception hierarchy, Protocol-based service interface
 
 ### Measurable Outcomes
@@ -73,7 +73,7 @@ The result is a user experience improvement at two levels: the application raise
 | Metric | Target |
 |--------|--------|
 | Java test parity | 4/4 scenarios pass in pytest |
-| New validation rules added | ≥ 3 (deposit amount, account number format, owner name) |
+| New validation rules added | ≥ 5 (deposit amount, withdrawal amount, account number format, owner name, duplicate account) |
 | PEP 8 violations | 0 |
 | Type check errors | 0 |
 | Test coverage | ≥ 90% |
@@ -90,6 +90,16 @@ The result is a user experience improvement at two levels: the application raise
 - Validation of amounts (positive), account number format, and owner name (non-empty)
 - Full pytest suite mirroring Java tests + new validation tests
 - PEP 8 compliant, type-checked, linted codebase
+
+### Out of Scope
+
+- Account deletion or file management commands
+- Multi-user support or concurrent access
+- Authentication or authorization
+- Database persistence (SQLite, PostgreSQL)
+- Interactive menu mode (Java's original interaction model)
+- JSON or structured output formats
+- Remote or networked operation
 
 ## User Journeys
 
@@ -132,6 +142,12 @@ Sam is a developer or technical user who runs the Bank Management System from a 
 **Scenario C — Negative deposit:**
 `uv run bank deposit 001 -50` — The Java version adds it (the balance decreases — a bug). The Python version rejects it: *"Deposit amount must be greater than 0."*
 
+**Scenario D — Non-numeric input:**
+`uv run bank deposit 001 abc` — The Java version crashes with an unrecoverable `InputMismatchException` caught only by the generic handler. The Python version, via `typer`, rejects it before the command runs: *"Invalid value for 'AMOUNT': 'abc' is not a valid float."*
+
+**Scenario E — Multi-word owner name:**
+`uv run bank create-account 002 "Ali Hassan" 500.0` — The Java version's `Scanner.next()` captures only "Ali", silently dropping the surname. The Python version accepts the full quoted string as a single argument.
+
 **Resolution:** Sam never has to guess what went wrong. Each error message names the field, states the rule, and implies the fix. This is the core UX improvement over the Java version.
 
 ---
@@ -159,7 +175,7 @@ Every command is self-documenting — no manual needed.
 |---------|----------------------|
 | 1 — Setup & Discovery | Project runs via `uv run bank`; `--help` on all commands; account creation with field validation |
 | 2 — Banking ops | Deposit and withdrawal with balance updates; account listing with formatted output |
-| 3 — Error recovery | Pydantic field-level error messages; account number format validation; amount positivity validation; overdraft protection with context |
+| 3 — Error recovery | Pydantic field-level error messages; account number format validation; amount positivity validation; overdraft protection with context; type-safe argument parsing; multi-word string handling |
 | 4 — Help | Built-in `--help` on every command via `typer` |
 
 ## CLI Tool Specific Requirements
@@ -227,7 +243,7 @@ Users can create a bank account by providing an account number, owner name, and 
 
 If any field is invalid, the command fails with a field-specific error message naming the rule that was violated. If the account number already exists, the command fails with a duplicate account error.
 
-**Acceptance criteria:** Account is persisted to `accounts.json` and visible in `show-accounts`. Invalid inputs are rejected with specific messages — one per violated rule.
+**Acceptance criteria:** Account is persisted and visible in subsequent `show-accounts` invocations. Invalid inputs are rejected with specific messages — one per violated rule.
 
 ### FR-2: Deposit (J2, J3)
 
@@ -255,7 +271,7 @@ Every command supports `--help`, displaying its name, description, and required 
 
 ### FR-6: Data Persistence Across Commands (J1, J2)
 
-Accounts created or modified by one command invocation are available to subsequent commands. Data is stored in `accounts.json` in the working directory. The file is created on first write and read on every command start.
+Accounts created or modified by one command invocation are available to subsequent commands. Data is persisted to the working directory automatically — no setup step required.
 
 **Acceptance criteria:** A `create-account` followed by a separate `show-accounts` invocation displays the created account.
 
