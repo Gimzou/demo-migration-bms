@@ -1,6 +1,12 @@
 ---
 stepsCompleted: [1, 2, '3-in-progress']
 lastStep: '3-epic1-complete'
+status: 'in-progress'
+lastEdited: '2026-03-29'
+workflowType: 'epics'
+project_name: 'demo-migration-bms'
+user_name: 'Arnould'
+date: '2026-03-29'
 inputDocuments:
   - specs/prd.md
   - specs/architecture.md
