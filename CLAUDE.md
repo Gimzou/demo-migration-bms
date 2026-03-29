@@ -69,6 +69,16 @@ The migration must demonstrate effective adoption of Pydantic as a replacement f
 }
 ```
 
+## Handling changes during implementation
+
+If a spec issue is discovered mid-sprint, use `bmad-correct-course` (`[CC]`) — do not edit planning artifacts directly.
+
+- **Small correction** (wrong AC, missing validation rule): CC proposes a targeted story/AC fix
+- **Architectural gap**: CC escalates to re-doing just the affected architecture section and derived stories
+- **Major pivot** (rare): CC may recommend going back to the PRD — but only as far back as the break actually is
+
+The rule: fix at the lowest level that contains the problem. A wrong AC in Story 2.3 does not reopen the PRD.
+
 ## Commands
 
 - Run BMad skill scripts: `uv run <script_path> [args...]`
