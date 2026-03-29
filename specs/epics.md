@@ -1,5 +1,6 @@
 ---
-stepsCompleted: [1, 2]
+stepsCompleted: [1, 2, '3-in-progress']
+lastStep: '3-epic1-complete'
 inputDocuments:
   - specs/prd.md
   - specs/architecture.md
@@ -86,3 +87,117 @@ After this epic, the CLI operator can create accounts, deposit and withdraw fund
 After this epic, all NFR gates pass: zero linting violations, zero type errors, ≥ 90% test coverage, and every Java test scenario has a verified pytest equivalent. The migration is complete and measurably correct.
 **FRs covered:** All FRs verified via test suite
 **NFRs addressed:** NFR-1, NFR-2, NFR-3, NFR-4, NFR-5
+
+## Epic 1: Runnable CLI Foundation
+
+After this epic, any developer can clone the repo, run `uv sync`, and execute `uv run bank --help` to see all available commands. The full architectural skeleton is in place with all five modules wired together.
+
+### Story 1.1: Project Scaffold & pyproject.toml Configuration
+
+As a developer,
+I want a correctly initialized Python package with all dependencies configured,
+So that I can run `uv sync` and have the full dev environment ready without any manual steps.
+
+**Acceptance Criteria:**
+
+**Given** a clean directory,
+**When** the scaffold is applied with `uv init --app --package bank --python ">=3.12"` and `pyproject.toml` is configured,
+**Then** `uv sync` completes with no errors
+**And** `uv run bank --help` exits with code 0
+
+**Given** the `pyproject.toml` is inspected,
+**When** dependencies are checked,
+**Then** runtime deps include `pydantic >=2.12,<3` and `typer >=0.24,<1`
+**And** dev deps include `pytest >=9,<10`, `pytest-cov`, `ruff >=0.15`, `mypy >=1.19`
+**And** `[project.scripts]` declares `bank = "bank.cli:app"`
+**And** `ruff check src/` and `mypy --strict src/` both exit with code 0
+
+### Story 1.2: Exception Hierarchy
+
+As a developer,
+I want a typed exception hierarchy for all domain errors,
+So that every error condition maps to a specific, catchable exception class.
+
+**Acceptance Criteria:**
+
+**Given** `exceptions.py` exists,
+**When** any domain rule is violated,
+**Then** the raised exception is a subclass of `BankError`
+**And** `AccountNotFoundError`, `DuplicateAccountError`, `InsufficientBalanceError`, `InvalidAmountError` are all importable from `bank.exceptions`
+**And** each exception accepts a `str` message
+**And** `ruff check src/` and `mypy --strict src/` pass with this file in place
+
+### Story 1.3: Account Model
+
+As a developer,
+I want an `Account` Pydantic `BaseModel` with enforced field constraints,
+So that no invalid `Account` instance can be created anywhere in the system.
+
+**Acceptance Criteria:**
+
+**Given** valid inputs (numeric account number, non-empty owner, balance ≥ 0),
+**When** `Account(account_number=..., owner=..., balance=...)` is called,
+**Then** the model is created successfully
+
+**Given** account number `"abc"` (non-numeric),
+**When** `Account(account_number="abc", ...)` is called,
+**Then** a `ValidationError` is raised with a message referencing the account number format rule
+
+**Given** an empty owner string or balance < 0,
+**When** the model is constructed with those values,
+**Then** a `ValidationError` is raised for the specific violated field
+
+**Given** a valid account,
+**When** `account.model_dump()` is called,
+**Then** output is `{"account_number": ..., "owner": ..., "balance": ...}` with no aliases
+**And** `Account.model_validate(account.model_dump())` round-trips without data loss
+**And** `ruff check src/` and `mypy --strict src/` pass
+
+### Story 1.4: Repository Layer
+
+As a developer,
+I want an `AccountRepository` Protocol and a `JsonFileAccountRepository` implementation,
+So that the service layer can read and write accounts without knowing about file persistence.
+
+**Acceptance Criteria:**
+
+**Given** no `accounts.json` file exists,
+**When** `JsonFileAccountRepository().find_all()` is called,
+**Then** it returns an empty list with no error
+
+**Given** an account saved via `save()` in one `JsonFileAccountRepository` instance,
+**When** `find_all()` is called on a new instance pointing to the same file,
+**Then** the saved account is returned
+
+**Given** a known account number,
+**When** `find_by_id(account_number)` is called,
+**Then** the matching `Account` is returned; for an unknown number, `None` is returned (no exception)
+
+**Given** `accounts.json` is inspected after a `save()`,
+**When** field names are checked,
+**Then** they match Python attribute names exactly (`account_number`, `owner`, `balance`) — no aliases
+**And** `JsonFileAccountRepository` satisfies the `AccountRepository` Protocol without inheriting from it
+**And** `ruff check src/` and `mypy --strict src/` pass
+
+### Story 1.5: CLI Scaffold & Command Discovery
+
+As a CLI operator,
+I want all commands discoverable via `--help`,
+So that I can learn the available commands and their arguments without reading source code.
+
+**Acceptance Criteria:**
+
+**Given** the CLI is installed,
+**When** I run `uv run bank --help`,
+**Then** output lists all four commands: `create-account`, `deposit`, `withdraw`, `show-accounts`
+
+**When** I run `uv run bank create-account --help`,
+**Then** output shows `ACCOUNT_NUMBER`, `OWNER`, `INITIAL_BALANCE` as required arguments
+
+**When** I run `uv run bank deposit --help` or `uv run bank withdraw --help`,
+**Then** output shows `ACCOUNT_NUMBER` and `AMOUNT` as required arguments
+
+**When** I run `uv run bank show-accounts --help`,
+**Then** output confirms the command takes no arguments
+**And** `cli.py` wires `BankServiceImpl(JsonFileAccountRepository())` as the composition root
+**And** `ruff check src/` and `mypy --strict src/` pass
