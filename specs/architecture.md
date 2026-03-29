@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5]
+stepsCompleted: [1, 2, 3, 4, 5, 6]
 inputDocuments:
   - specs/prd.md
   - docs/BankManagementSystem/README.md
@@ -261,3 +261,72 @@ class BankService(Protocol):
 - ❌ `model_dump(by_alias=True)` (alias serialization)
 - ❌ `raise AccountNotFoundError(...)` inside repository (repository returns None)
 - ❌ `print("Error: ...")` in service layer (only CLI formats output)
+
+## Project Structure & Boundaries
+
+### Complete Project Directory Structure
+
+```
+bank/
+├── .gitignore
+├── .python-version
+├── README.md
+├── pyproject.toml
+├── src/
+│   └── bank/
+│       ├── __init__.py
+│       ├── cli.py
+│       ├── model.py
+│       ├── service.py
+│       ├── repository.py
+│       └── exceptions.py
+└── tests/
+    ├── __init__.py
+    ├── conftest.py
+    ├── test_model.py
+    ├── test_service.py
+    ├── test_repository.py
+    └── test_cli.py
+```
+
+13 files total. No additional directories, CI configs, or tooling beyond what `uv init --app --package` and `pyproject.toml` provide.
+
+### Requirements to Structure Mapping
+
+| FR | Primary Module | Supporting Modules |
+|----|----------------|-------------------|
+| FR-1 Account Creation | `service.py` | `model.py`, `repository.py`, `cli.py` |
+| FR-2 Deposit | `service.py` | `model.py`, `repository.py`, `cli.py` |
+| FR-3 Withdrawal | `service.py` | `model.py`, `repository.py`, `exceptions.py`, `cli.py` |
+| FR-4 Account Listing | `service.py` | `repository.py`, `cli.py` |
+| FR-5 Discoverability | `cli.py` | typer built-in |
+| FR-6 Persistence | `repository.py` | `model.py` |
+
+### Architectural Boundaries
+
+**Boundary 1 — CLI → Service (composition root):**
+`cli.py` instantiates `BankServiceImpl` with `JsonFileAccountRepository` and calls service methods. The only place where concrete implementations are wired together. Direction is one-way: CLI calls service; service never calls CLI.
+
+**Boundary 2 — Service → Repository (Protocol interface):**
+`service.py` depends on the `AccountRepository` Protocol. Repository returns data or `None`; service decides whether to raise domain exceptions.
+
+**Boundary 3 — Model ↔ JSON (serialization boundary):**
+`repository.py` uses `Account.model_dump()` / `Account.model_validate()` for JSON round-trip. The file structure is determined entirely by the Pydantic model.
+
+### Data Flow
+
+Every CLI command follows the same pattern:
+
+```
+User input → typer parses args → cli.py calls service method
+  → service calls repository (read) → repository reads accounts.json
+  → Account.model_validate() per entry → service applies business logic
+  → service calls repository (write) → Account.model_dump() per entry
+  → repository writes accounts.json → service returns Account
+  → cli.py prints success message
+```
+
+Error flow:
+- Pydantic `ValidationError` → caught by `cli.py` → user message
+- `BankError` subtypes → caught by `cli.py` → user message
+- typer `BadParameter` → handled by typer → usage error
