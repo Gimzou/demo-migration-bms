@@ -98,3 +98,79 @@ uv init --app --package bank --python ">=3.12"
 - Entry point: `bank = "bank.cli:app"`
 
 **Note:** Project initialization using this command should be the first implementation story.
+
+## Core Architectural Decisions
+
+### Decision Priority Analysis
+
+**Critical Decisions (Block Implementation):**
+All 4 decisions below are critical — an implementing agent cannot write consistent code without them.
+
+**Deferred Decisions (Post-MVP):**
+- Authentication & security: out of scope
+- Infrastructure & deployment: local CLI, no deployment target
+- Frontend architecture: N/A
+- API design: N/A
+
+### Data Architecture
+
+**Persistence:** JSON file in working directory (`accounts.json`). Created on first write, no setup step. Pydantic's `model_dump()` / `model_validate()` handle serialization — no extra libraries.
+
+**Repository Interface:** `Protocol`-based. `JsonFileAccountRepository` implements the protocol without inheriting from it. The service layer depends on the protocol, not the concrete class.
+
+**Validation Strategy:** Two-tier.
+- Tier 1 (field-level): Pydantic `Field` constraints and `@field_validator` on `Account`. Enforced at model construction time.
+- Tier 2 (entity-level): Business rules requiring repository state (duplicate detection, overdraft) and operation-level validation (amount > 0) live in `BankServiceImpl`. Raised as typed domain exceptions.
+
+### Exception Hierarchy
+
+Flat, one level deep. Each exception maps 1:1 to a business rule violation:
+
+```
+BankError (base)
+├── AccountNotFoundError
+├── DuplicateAccountError
+├── InsufficientBalanceError
+└── InvalidAmountError
+```
+
+All inherit from a common `BankError` base so the CLI can catch the entire domain in one handler if needed.
+
+### Module Structure
+
+Flat, one module per concern inside `src/bank/`:
+
+```
+src/bank/
+├── __init__.py
+├── cli.py          # typer app + error formatting
+├── model.py        # Account BaseModel
+├── service.py      # BankService Protocol + BankServiceImpl
+├── repository.py   # AccountRepository Protocol + JsonFileAccountRepository
+└── exceptions.py   # BankError hierarchy
+```
+
+No sub-packages. Each file has a single, obvious responsibility.
+
+### Error Handling Flow
+
+`ValidationError` from Pydantic is caught at the CLI boundary (`cli.py`), not wrapped in domain exceptions. The CLI extracts the first error message from `e.errors()[0]["msg"]` and prints it as a user-readable sentence.
+
+Domain exceptions (`BankError` subtypes) raised by the service layer are also caught at the CLI boundary and formatted into user-readable messages.
+
+The CLI is the only place where error message text is authored. No other layer formats output.
+
+### Decision Impact Analysis
+
+**Implementation Sequence:**
+1. `exceptions.py` — no dependencies
+2. `model.py` — depends on nothing (Pydantic self-contained)
+3. `repository.py` — depends on `model`
+4. `service.py` — depends on `model`, `repository` (protocol), `exceptions`
+5. `cli.py` — depends on `service`, `exceptions`, catches `ValidationError`
+
+**Cross-Component Dependencies:**
+- `model.py` is imported by `repository.py`, `service.py`
+- `exceptions.py` is imported by `service.py`, `cli.py`
+- `repository.py` protocol is imported by `service.py`
+- `cli.py` imports everything — it is the composition root
