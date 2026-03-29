@@ -1,7 +1,8 @@
 ---
-stepsCompleted: [1, 2, '3-in-progress']
-lastStep: '3-epic1-complete'
-status: 'in-progress'
+stepsCompleted: [1, 2, 3, 4]
+lastStep: 4
+status: 'complete'
+completedAt: '2026-03-29'
 lastEdited: '2026-03-29'
 workflowType: 'epics'
 project_name: 'demo-migration-bms'
@@ -207,3 +208,176 @@ So that I can learn the available commands and their arguments without reading s
 **Then** output confirms the command takes no arguments
 **And** `cli.py` wires `BankServiceImpl(JsonFileAccountRepository())` as the composition root
 **And** `ruff check src/` and `mypy --strict src/` pass
+
+## Epic 2: Core Banking Operations
+
+After this epic, the CLI operator can create accounts, deposit and withdraw funds, and list all accounts with formatted output. All business rules are enforced and all error messages are specific, field-named, and actionable.
+
+### Story 2.1: Create Account Command
+
+As a CLI operator,
+I want to create a bank account with a validated account number, owner name, and initial balance,
+So that I can start managing funds for a new customer.
+
+**Acceptance Criteria:**
+
+**Given** valid arguments,
+**When** I run `uv run bank create-account 001 Ali 500.0`,
+**Then** output is `"Account created successfully."` and the account is persisted to `accounts.json`
+
+**Given** an account number already in use,
+**When** I run `create-account 001 ...` again,
+**Then** the command fails with a duplicate account error message (no raw traceback)
+
+**Given** account number `"abc"` (non-numeric),
+**When** I run `create-account abc Ali 500.0`,
+**Then** the command fails with a message naming the account number format rule
+
+**Given** initial balance `-100.0`,
+**When** I run `create-account 001 Ali -100.0`,
+**Then** the command fails with a message naming the balance ≥ 0 rule
+
+**And** a subsequent `show-accounts` invocation lists the created account
+
+### Story 2.2: Deposit Command
+
+As a CLI operator,
+I want to deposit funds into an existing account,
+So that I can increase the account balance.
+
+**Acceptance Criteria:**
+
+**Given** account `001` with balance `500.0`,
+**When** I run `uv run bank deposit 001 200.0`,
+**Then** output is `"Deposit successful."` and balance is now `700.0` in `accounts.json`
+
+**Given** an unknown account number,
+**When** I run `deposit 999 100.0`,
+**Then** the command fails with an account-not-found error message
+
+**Given** amount `0.0` or `-50.0`,
+**When** the deposit command is run with those values,
+**Then** the command fails with a message stating the amount must be greater than 0
+**And** the balance is not modified
+
+### Story 2.3: Withdrawal Command
+
+As a CLI operator,
+I want to withdraw funds from an existing account,
+So that I can process a customer disbursement.
+
+**Acceptance Criteria:**
+
+**Given** account `001` with balance `500.0`,
+**When** I run `uv run bank withdraw 001 200.0`,
+**Then** output is `"Withdrawal successful."` and balance is now `300.0` in `accounts.json`
+
+**Given** account `001` with balance `300.0`,
+**When** I run `withdraw 001 800.0`,
+**Then** the command fails with a message that includes both the attempted amount (`800.00`) and the current balance (`300.00`)
+**And** the balance is unchanged
+
+**Given** an unknown account number,
+**When** I run `withdraw 999 100.0`,
+**Then** the command fails with an account-not-found error message
+
+**Given** amount `0.0`,
+**When** I run `withdraw 001 0.0`,
+**Then** the command fails with a positivity rule message
+
+### Story 2.4: Account Listing Command
+
+As a CLI operator,
+I want to list all accounts with their balances,
+So that I can see the current state of all accounts at a glance.
+
+**Acceptance Criteria:**
+
+**Given** two accounts exist,
+**When** I run `uv run bank show-accounts`,
+**Then** output is a formatted table with columns: Account Number, Owner, Balance
+**And** balance values are formatted to 2 decimal places (e.g. `500.00`)
+
+**Given** no accounts exist,
+**When** I run `show-accounts`,
+**Then** output is `"No accounts found."`
+
+**And** accounts created in prior command invocations appear in the listing (persistence verified)
+
+## Epic 3: Migration Quality Assurance
+
+After this epic, all NFR gates pass: zero linting violations, zero type errors, ≥ 90% test coverage, and every Java test scenario has a verified pytest equivalent. The migration is complete and measurably correct.
+
+### Story 3.1: Test Foundation & Account Model Tests
+
+As a developer,
+I want shared test fixtures and unit tests for the `Account` model,
+So that model validation behavior is provably correct and fixtures are reusable across the suite.
+
+**Acceptance Criteria:**
+
+**Given** `tests/conftest.py` exists,
+**When** the test suite runs,
+**Then** it provides: a sample valid `Account` fixture, a `tmp_path`-based JSON file fixture, and a pre-populated `JsonFileAccountRepository` fixture
+
+**Given** `tests/test_model.py` exists,
+**When** pytest runs,
+**Then** it covers: valid account creation, rejection of non-numeric account numbers, rejection of empty owner, rejection of negative balance
+**And** `account.model_dump()` / `Account.model_validate()` round-trip is tested
+**And** `pytest --cov` reports coverage for `bank/model.py`
+
+### Story 3.2: Service & Repository Tests
+
+As a developer,
+I want complete tests for the service and repository layers,
+So that business logic and persistence behavior are independently verified.
+
+**Acceptance Criteria:**
+
+**Given** `tests/test_repository.py` exists,
+**When** pytest runs,
+**Then** it covers: `find_all()` on a missing file returns `[]`, `save()` + `find_by_id()` round-trip, `exists()` with known and unknown IDs, persistence across two `JsonFileAccountRepository` instances on the same temp file
+
+**Given** `tests/test_service.py` exists,
+**When** pytest runs,
+**Then** it covers: `create_account` success, `DuplicateAccountError` on duplicate, `deposit` success and `InvalidAmountError` on zero/negative amount, `withdraw` success and `InsufficientBalanceError` on overdraft, `AccountNotFoundError` for deposit/withdraw on unknown account
+**And** all four Java test scenarios (create, deposit, withdraw, overdraft rejection) have direct pytest equivalents
+
+### Story 3.3: CLI Integration Tests & Error Message Assertions
+
+As a developer,
+I want CLI-level tests that verify command output and error message content,
+So that the user-facing UX is regression-protected.
+
+**Acceptance Criteria:**
+
+**Given** `tests/test_cli.py` uses typer's `CliRunner`,
+**When** pytest runs,
+**Then** it covers success paths: `create-account` prints `"Account created successfully."`, `deposit` prints `"Deposit successful."`, `withdraw` prints `"Withdrawal successful."`, `show-accounts` prints a formatted table, empty state prints `"No accounts found."`
+
+**And** error paths assert on message content (not just exit code): duplicate account message, overdraft message containing both amounts, non-numeric account number message, account-not-found message
+**And** no test asserts on raw Pydantic `ValidationError` format — all assertions target the reformatted user-facing string
+
+### Story 3.4: NFR Gates — Linting, Typing & Coverage
+
+As a developer,
+I want all quality gates to pass on the complete codebase,
+So that the migration is measurably complete and the codebase is maintainable.
+
+**Acceptance Criteria:**
+
+**Given** the full codebase,
+**When** `ruff check src/` is run,
+**Then** exit code is 0 with zero violations (NFR-1)
+
+**When** `mypy --strict src/` is run,
+**Then** exit code is 0 with zero errors (NFR-2)
+
+**When** `pytest --cov` is run,
+**Then** reported line coverage is ≥ 90% (NFR-3)
+
+**When** source files under `src/bank/` are reviewed,
+**Then** no `if` guards for input validation exist outside Pydantic model definitions (NFR-4)
+
+**When** a clean clone runs `uv sync` then `uv run bank --help`,
+**Then** the command succeeds with no errors (NFR-6)
