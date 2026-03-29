@@ -4,5 +4,18 @@
       "WebSearch",
       "WebFetch"
     ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/commit-step.sh"
+          }
+        ]
+      }
+    ]
   }
 }

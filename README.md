@@ -12,6 +12,8 @@ Nice to have :
 
 1. Claude
     - Write a `./CLAUDE.md`, `.claude/CLAUDE.local.md`
+    - Allow WebSearch
+    - Write `commit-step` hook
 2. BMAD
     - output files : `/specs`
     - familiarize with methodology by watching youtube video : [The Official BMad-Method MasterClass](https://www.youtube.com/watch?v=LorEJPrALcg)

@@ -47,5 +47,12 @@ Bmad project initialization answers :
 - Prefer `uv` for virtual environment management
 - Use `pydantic` and `python 3.12+`
 
+
 ## Commands
+
+- Run BMad skill scripts: `uv run <script_path> [args...]`
+  - All `.py` scripts under `.claude/skills/` use PEP 723 inline metadata — `uv  
+  run` resolves their dependencies automatically.
+
+
 
