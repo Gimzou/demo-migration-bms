@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1]
+stepsCompleted: [1, 2]
 inputDocuments:
   - specs/prd.md
   - specs/architecture.md
@@ -60,8 +60,29 @@ NFR-6: The project runs with `uv sync` followed by `uv run bank <command>`. No m
 
 ### FR Coverage Map
 
-{{requirements_coverage_map}}
+FR-1: Epic 2 — Account creation with field validation and duplicate detection
+FR-2: Epic 2 — Deposit with amount > 0 validation and balance persistence
+FR-3: Epic 2 — Withdrawal with overdraft protection and balance persistence
+FR-4: Epic 2 — Account listing with tabular output and empty-state message
+FR-5: Epic 1 — Command discoverability via typer `--help` on all commands
+FR-6: Epic 1 — Cross-invocation persistence via `JsonFileAccountRepository`
 
 ## Epic List
 
-{{epics_list}}
+### Epic 1: Runnable CLI Foundation
+
+After this epic, any developer can clone the repo, run `uv sync`, and execute `uv run bank --help` to see all available commands. The full architectural skeleton is in place with all five modules wired together.
+**FRs covered:** FR-5, FR-6
+**NFRs addressed:** NFR-6 (zero-setup), NFR-1 and NFR-2 enforced from day one
+
+### Epic 2: Core Banking Operations
+
+After this epic, the CLI operator can create accounts, deposit and withdraw funds, and list all accounts with formatted output. All business rules are enforced and all error messages are specific, field-named, and actionable.
+**FRs covered:** FR-1, FR-2, FR-3, FR-4
+**NFRs addressed:** NFR-4 (Pydantic validation architecture), NFR-5 (error message quality)
+
+### Epic 3: Migration Quality Assurance
+
+After this epic, all NFR gates pass: zero linting violations, zero type errors, ≥ 90% test coverage, and every Java test scenario has a verified pytest equivalent. The migration is complete and measurably correct.
+**FRs covered:** All FRs verified via test suite
+**NFRs addressed:** NFR-1, NFR-2, NFR-3, NFR-4, NFR-5
