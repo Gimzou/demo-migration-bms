@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1]
+stepsCompleted: [1, 2]
 inputDocuments:
   - specs/prd.md
   - docs/BankManagementSystem/README.md
@@ -12,3 +12,43 @@ date: '2026-03-29'
 # Architecture Decision Document
 
 _This document builds collaboratively through step-by-step discovery. Sections are appended as we work through each architectural decision together._
+
+## Project Context Analysis
+
+### Requirements Overview
+
+**Functional Requirements:**
+6 FRs covering account CRUD (create, list), banking transactions (deposit, withdraw), CLI discoverability (--help), and cross-invocation data persistence. All operations are synchronous, single-user, and argument-driven. The account model is the only domain entity.
+
+**Non-Functional Requirements:**
+6 NFRs that function as hard gates, not guidelines:
+- Code quality: `ruff check src/` = 0 violations
+- Type safety: `mypy --strict src/` = 0 errors
+- Test coverage: `pytest --cov` ≥ 90%
+- Validation architecture: all business rules in Pydantic, none in application code
+- Error messages: field-specific, rule-stating, action-implying — no raw tracebacks
+- Zero-setup: `uv sync` + `uv run bank` on a clean clone
+
+**Scale & Complexity:**
+
+- Primary domain: CLI tool (fintech demo scope)
+- Complexity level: Low
+- Estimated architectural components: 5 (model, service protocol + impl, repository, exception hierarchy, CLI entry point)
+
+### Technical Constraints & Dependencies
+
+- Python 3.12+ (required for modern type syntax: `type` aliases, `TypeVar` defaults, `override`)
+- Pydantic v2 for model validation and JSON serialization
+- `typer` for CLI argument parsing and `--help` generation
+- `uv` as the sole package/environment manager
+- JSON file persistence in working directory (no database)
+- No configuration files, environment variables, or dotfiles
+- Entry-point configuration in `pyproject.toml` (`[project.scripts]`) is required for the `uv run bank` zero-setup experience (NFR-6)
+
+### Cross-Cutting Concerns Identified
+
+1. **Field-level validation (Pydantic):** Account number format, owner non-empty, balance ≥ 0, amount > 0. These are declared on the `Account` model and enforced at construction time. No other layer duplicates these checks.
+2. **Entity-level business rules (Service):** Duplicate account detection and overdraft protection require repository state and cannot be expressed as Pydantic validators. The service layer owns these rules and raises typed exceptions when they're violated.
+3. **CLI as error-translation boundary:** The CLI layer contains zero business logic. Its sole role beyond argument parsing is catching `ValidationError` (from Pydantic) and domain exceptions (from the service layer) and formatting them into user-readable sentences. This is the only place where error message text is authored.
+4. **Repository encapsulates persistence lifecycle:** The read-modify-write cycle is internal to `JsonFileAccountRepository`, not a cross-cutting concern. The service layer interacts through a clean interface (`find_all`, `find_by_id`, `save`) without knowing about the JSON file.
+5. **Serialization round-trip:** `Account.model_dump()` → JSON file → `Account.model_validate()`. Every field must survive this cycle without data loss or type coercion surprises.
