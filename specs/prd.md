@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary, step-03-success]
+stepsCompleted: [step-01-init, step-02-discovery, step-02b-vision, step-02c-executive-summary, step-03-success, step-04-journeys]
 classification:
   projectType: cli_tool
   domain: fintech_demo
@@ -86,3 +86,63 @@ The result is a user experience improvement at two levels: the application raise
 - Validation of amounts (positive), account number format, and owner name (non-empty)
 - Full pytest suite mirroring Java tests + new validation tests
 - PEP 8 compliant, type-checked, linted codebase
+
+## User Journeys
+
+### Persona: Sam, the CLI Operator
+
+Sam is a developer or technical user who runs the Bank Management System from a terminal. They expect a responsive, predictable console interface that tells them clearly what went wrong when they make a mistake.
+
+---
+
+### Journey 1: First-Time Setup and Account Creation
+
+**Opening:** Sam clones the project and runs `uv sync && uv run bank`. The application starts instantly — no JDK, no classpath, no build step.
+
+**Action:** Sam selects "1. Create Account", enters an account number, owner name, and initial balance. The application confirms: *"Account created successfully."*
+
+**Resolution:** Sam selects "4. Display Accounts" and sees their new account listed with formatted balance. They trust the system is working.
+
+---
+
+### Journey 2: Normal Banking Operations
+
+**Opening:** Sam has an existing account and wants to manage funds.
+
+**Action:** Sam deposits 500.00 into the account, then withdraws 200.00. Each operation confirms with a clear success message and the balance updates correctly.
+
+**Resolution:** Sam displays all accounts and verifies the balance reflects both operations. The workflow feels fast and predictable.
+
+---
+
+### Journey 3: Error Recovery — Where Pydantic Shines
+
+**Opening:** Sam makes a series of input mistakes — this is where the Python rewrite diverges most from the Java original.
+
+**Scenario A — Overdraft attempt:**
+Sam tries to withdraw more than the balance. The Java version prints: `Error: Insufficient balance`. The Python version prints: *"Insufficient balance: cannot withdraw 800.00 from account 001 (current balance: 300.00)."*
+
+**Scenario B — Invalid account number format:**
+Sam enters `abc` as an account number. The Java version silently accepts it. The Python version rejects it: *"Account number must be a numeric string (e.g., '001')."*
+
+**Scenario C — Negative deposit:**
+Sam enters `-50` as a deposit amount. The Java version adds it (the balance decreases — a bug). The Python version rejects it: *"Deposit amount must be greater than 0."*
+
+**Resolution:** Sam never has to guess what went wrong. Each error message names the field, states the rule, and implies the fix. This is the core UX improvement over the Java version.
+
+---
+
+### Journey 4: Clean Exit
+
+Sam selects "0. Exit". The application prints *"Thank you for using our Bank Service"* and terminates cleanly. No hanging processes, no unclosed resources.
+
+---
+
+### Journey Requirements Summary
+
+| Journey | Capabilities revealed |
+|---------|----------------------|
+| 1 — Setup & Create | Project runs via `uv run bank`; account creation with field validation |
+| 2 — Banking ops | Deposit and withdrawal with balance updates; account listing with formatted output |
+| 3 — Error recovery | Pydantic field-level error messages; account number format validation; amount positivity validation; overdraft protection with context |
+| 4 — Exit | Clean shutdown with farewell message |
