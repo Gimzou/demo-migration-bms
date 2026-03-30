@@ -1,16 +1,24 @@
 #!/usr/bin/env bash
-# Auto-commit BMAD spec artifacts when a workflow step is completed.
+# Auto-commit BMAD artifacts when a milestone is reached.
 # Triggered as a Claude Code "Stop" hook.
 #
-# Detection: counts entries in the stepsCompleted YAML array and commits
-# only when the count increased compared to the last committed version.
+# Phase 1 — Planning:  commits when stepsCompleted array grows in specs/*.md
+# Phase 2 — Implementation: commits when story Status transitions to "review"
+#            or "done" in specs/implementation-artifacts/*.md, staging exactly
+#            the files listed in the story's "### File List" section.
 
 set -euo pipefail
 
 PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
 cd "$PROJECT_ROOT"
 
-# Count entries in a stepsCompleted YAML line, e.g. "[1, 2]" → 2, "" → 0
+# ── BMAD output directories (mirror bmad-init config) ────────────────────────
+# core.output_folder / bmm.planning_artifacts
+PLANNING_DIR="specs"
+# bmm.implementation_artifacts
+IMPLEMENTATION_DIR="specs/implementation-artifacts"
+
+# Count comma-separated entries inside a YAML array line, e.g. "[1, 2]" → 2
 count_steps() {
     local line="$1"
     [ -z "$line" ] && echo 0 && return
@@ -18,38 +26,73 @@ count_steps() {
         | tr ',' '\n' | sed '/^[[:space:]]*$/d' | wc -l | tr -d ' '
 }
 
-# Collect spec files with changes (tracked modified + untracked)
-changed=$(git diff --name-only -- "specs/" 2>/dev/null || true)
-untracked=$(git ls-files --others --exclude-standard -- "specs/" 2>/dev/null || true)
-files=$(printf '%s\n%s' "$changed" "$untracked" | sort -u | sed '/^$/d')
+# Parse the "### File List" section of a story file and print each path (one per line).
+# Strips trailing annotations like "(new)" or "(modified)".
+story_file_list() {
+    local story="$1"
+    awk '/^### File List/{found=1; next} /^##/{found=0} found && /^- /{print}' "$story" \
+        | sed 's/^- //' | sed 's/ (.*//'
+}
 
-[ -z "$files" ] && exit 0
+# ── Phase 1: Planning milestone — stepsCompleted array grew ──────────────────
 
-for file in $files; do
+changed=$(git diff --name-only -- "$PLANNING_DIR/" 2>/dev/null || true)
+untracked=$(git ls-files --others --exclude-standard -- "$PLANNING_DIR/" 2>/dev/null || true)
+planning_files=$(printf '%s\n%s' "$changed" "$untracked" | sort -u | sed '/^$/d')
+
+for file in $planning_files; do
     [ -f "$file" ] || continue
 
-    # Read current stepsCompleted from working tree
     current=$(grep '^stepsCompleted:' "$file" 2>/dev/null || true)
     [ -z "$current" ] && continue
 
-    # Read previously committed stepsCompleted (empty string for new files)
     previous=$(git show "HEAD:$file" 2>/dev/null | grep '^stepsCompleted:' 2>/dev/null || true)
 
-    # Compare entry counts — only commit when a step was added
     current_count=$(count_steps "$current")
     previous_count=$(count_steps "$previous")
     [ "$current_count" -le "$previous_count" ] && continue
 
-    # Extract last entry and workflow type for the commit message
     last_step=$(echo "$current" | sed 's/.*\[//' | sed 's/\].*//' \
         | tr ',' '\n' | sed '/^[[:space:]]*$/d' | tail -1 | tr -d ' ')
     workflow=$(grep '^workflowType:' "$file" 2>/dev/null | head -1 \
         | sed "s/workflowType: *['\"]*//" | sed "s/['\"].*//" | tr -d ' ' || true)
 
-    # Stage all spec changes and commit
-    git add specs/
+    git add "$PLANNING_DIR/"
     git commit -m "docs(${workflow:-specs}): complete ${last_step:-step}"
-
     echo "Auto-committed: docs(${workflow:-specs}): complete ${last_step:-step}" >&2
+    exit 0
+done
+
+# ── Phase 2: Implementation milestone — story Status → "review" or "done" ────
+
+impl_changed=$(git diff --name-only -- "$IMPLEMENTATION_DIR/" 2>/dev/null || true)
+impl_untracked=$(git ls-files --others --exclude-standard -- "$IMPLEMENTATION_DIR/" 2>/dev/null || true)
+impl_files=$(printf '%s\n%s' "$impl_changed" "$impl_untracked" | sort -u | sed '/^$/d')
+
+for file in $impl_files; do
+    [ -f "$file" ] || continue
+    [[ "$file" == *.md ]] || continue
+
+    current_status=$(grep '^Status:' "$file" 2>/dev/null | head -1 \
+        | sed 's/Status: *//' | tr -d ' ' || true)
+    [[ "$current_status" == "review" || "$current_status" == "done" ]] || continue
+
+    previous_status=$(git show "HEAD:$file" 2>/dev/null | grep '^Status:' 2>/dev/null \
+        | head -1 | sed 's/Status: *//' | tr -d ' ' || true)
+    [ "$current_status" = "$previous_status" ] && continue
+
+    story_id=$(basename "$file" .md)
+
+    # Stage the story file itself
+    git add "$file"
+
+    # Stage each source file listed in the story's File List section
+    while IFS= read -r src_file; do
+        src_file=$(echo "$src_file" | tr -d '[:space:]')
+        [ -n "$src_file" ] && [ -f "$src_file" ] && git add "$src_file" || true
+    done < <(story_file_list "$file")
+
+    git commit -m "feat($story_id): $current_status"
+    echo "Auto-committed: feat($story_id): $current_status" >&2
     exit 0
 done
