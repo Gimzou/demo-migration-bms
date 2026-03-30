@@ -1,6 +1,6 @@
 # Story 1.2: Exception Hierarchy
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -18,20 +18,20 @@ so that every error condition maps to a specific, catchable exception class.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Implement exception hierarchy in `src/bank/exceptions.py` (AC: 1, 2, 3)
-  - [ ] Replace the Story 1.1 stub with full implementation
-  - [ ] Define `BankError(Exception)` with `message: str` constructor
-  - [ ] Define all four subtypes inheriting from `BankError`
-  - [ ] Ensure each subtype passes its message up to `super().__init__(message)`
+- [x] Task 1: Implement exception hierarchy in `src/bank/exceptions.py` (AC: 1, 2, 3)
+  - [x] Replace the Story 1.1 stub with full implementation
+  - [x] Define `BankError(Exception)` with `message: str` constructor
+  - [x] Define all four subtypes inheriting from `BankError`
+  - [x] Ensure each subtype passes its message up to `super().__init__(message)`
 
-- [ ] Task 2: Write unit tests in `tests/test_exceptions.py` (AC: 2, 3)
-  - [ ] Test that each exception is a subclass of `BankError`
-  - [ ] Test that `isinstance(exc, BankError)` is `True` for all subtypes
-  - [ ] Test that `str(exc)` returns the message passed at construction
+- [x] Task 2: Write unit tests in `tests/test_exceptions.py` (AC: 2, 3)
+  - [x] Test that each exception is a subclass of `BankError`
+  - [x] Test that `isinstance(exc, BankError)` is `True` for all subtypes
+  - [x] Test that `str(exc)` returns the message passed at construction
 
-- [ ] Task 3: Verify quality gates (AC: 4, 5)
-  - [ ] `ruff check src/` → exit code 0
-  - [ ] `mypy --strict src/` → exit code 0
+- [x] Task 3: Verify quality gates (AC: 4, 5)
+  - [x] `ruff check src/` → exit code 0
+  - [x] `mypy --strict src/` → exit code 0
 
 ## Dev Notes
 
@@ -129,10 +129,24 @@ If Story 1.1 is not done, complete it first.
 
 ### Agent Model Used
 
-_to be filled by dev agent_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+No blockers encountered.
+
 ### Completion Notes List
 
+- Replaced the Story 1.1 stub in `src/bank/exceptions.py` with full implementation: `BankError.__init__` now accepts `message: str`, calls `super().__init__(message)`, and stores `self.message = message`. All four subtypes (`AccountNotFoundError`, `DuplicateAccountError`, `InsufficientBalanceError`, `InvalidAmountError`) inherit from `BankError` with `pass` bodies — they inherit the constructor for free.
+- Created `tests/test_exceptions.py` with 23 tests covering: `BankError` base behaviour, subtype inheritance (`issubclass`), `isinstance` checks, `str(exc)` returning the message, `exc.message` attribute access, and named scenarios for each of the four subtypes.
+- Red-green-refactor cycle confirmed: 5 tests failed before implementation (missing `message` attribute on stub), all 32 tests passed after implementation.
+- `ruff check src/` exit 0; `mypy --strict src/` exit 0; 100% coverage on `src/bank/exceptions.py`.
+
 ### File List
+
+- src/bank/exceptions.py (modified)
+- tests/test_exceptions.py (new)
+
+## Change Log
+
+- 2026-03-30: Story implemented — replaced exceptions.py stub with typed BankError hierarchy; created tests/test_exceptions.py with 23 tests; all quality gates pass (ruff, mypy --strict, pytest 32/32).
