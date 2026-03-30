@@ -1,6 +1,6 @@
 # Story 1.1: Project Scaffold & pyproject.toml Configuration
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -20,36 +20,36 @@ so that I can run `uv sync` and have the full dev environment ready without any 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Initialize the uv project (AC: 1, 2)
-  - [ ] Run `uv init --app --package bank --python ">=3.12"` in the project root
-  - [ ] Remove `src/bank/__main__.py` if created by `uv init` (not in architecture spec)
-  - [ ] Verify the generated `src/bank/__init__.py` exists
+- [x] Task 1: Initialize the uv project (AC: 1, 2)
+  - [x] Run `uv init --app --package bank --python ">=3.12"` in the project root
+  - [x] Remove `src/bank/__main__.py` if created by `uv init` (not in architecture spec)
+  - [x] Verify the generated `src/bank/__init__.py` exists
 
-- [ ] Task 2: Configure pyproject.toml dependencies (AC: 3, 4, 5)
-  - [ ] Add runtime deps: `uv add "pydantic>=2.12,<3" "typer>=0.24,<1"`
-  - [ ] Add dev deps: `uv add --dev "pytest>=9,<10" pytest-cov "ruff>=0.15" "mypy>=1.19"`
-  - [ ] Verify `[project.scripts]` has `bank = "bank.cli:app"` (may require manual edit)
+- [x] Task 2: Configure pyproject.toml dependencies (AC: 3, 4, 5)
+  - [x] Add runtime deps: `uv add "pydantic>=2.12,<3" "typer>=0.24,<1"`
+  - [x] Add dev deps: `uv add --dev "pytest>=9,<10" pytest-cov "ruff>=0.15" "mypy>=1.19"`
+  - [x] Verify `[project.scripts]` has `bank = "bank.cli:app"` (may require manual edit)
 
-- [ ] Task 3: Add tool configuration to pyproject.toml (AC: 6, 7)
-  - [ ] Add `[tool.ruff.lint]` with `select = ["E", "F", "W", "I"]`
-  - [ ] Add `[tool.mypy]` with `strict = true`
-  - [ ] Add `[tool.pytest.ini_options]` with `testpaths = ["tests"]` and `addopts = "--cov=bank --cov-report=term-missing"`
+- [x] Task 3: Add tool configuration to pyproject.toml (AC: 6, 7)
+  - [x] Add `[tool.ruff.lint]` with `select = ["E", "F", "W", "I"]`
+  - [x] Add `[tool.mypy]` with `strict = true`
+  - [x] Add `[tool.pytest.ini_options]` with `testpaths = ["tests"]` and `addopts = "--cov=bank --cov-report=term-missing"`
 
-- [ ] Task 4: Create module stubs — all 5 files (AC: 6, 7)
-  - [ ] `src/bank/exceptions.py` — exception hierarchy stubs
-  - [ ] `src/bank/model.py` — Account BaseModel stub
-  - [ ] `src/bank/repository.py` — Protocol stub
-  - [ ] `src/bank/service.py` — Protocol stub
-  - [ ] `src/bank/cli.py` — typer app stub (MUST export `app`)
+- [x] Task 4: Create module stubs — all 5 files (AC: 6, 7)
+  - [x] `src/bank/exceptions.py` — exception hierarchy stubs
+  - [x] `src/bank/model.py` — Account BaseModel stub
+  - [x] `src/bank/repository.py` — Protocol stub
+  - [x] `src/bank/service.py` — Protocol stub
+  - [x] `src/bank/cli.py` — typer app stub (MUST export `app`)
 
-- [ ] Task 5: Create tests/ scaffold (AC: 7)
-  - [ ] `tests/__init__.py` — empty
-  - [ ] `tests/conftest.py` — empty placeholder (fixtures added in Epic 3)
+- [x] Task 5: Create tests/ scaffold (AC: 7)
+  - [x] `tests/__init__.py` — empty
+  - [x] `tests/conftest.py` — empty placeholder (fixtures added in Epic 3)
 
-- [ ] Task 6: Verify quality gates (AC: 6, 7)
-  - [ ] Run `ruff check src/` → exit code 0
-  - [ ] Run `mypy --strict src/` → exit code 0
-  - [ ] Run `uv run bank --help` → exit code 0
+- [x] Task 6: Verify quality gates (AC: 6, 7)
+  - [x] Run `ruff check src/` → exit code 0
+  - [x] Run `mypy --strict src/` → exit code 0
+  - [x] Run `uv run bank --help` → exit code 0
 
 ## Dev Notes
 
@@ -226,10 +226,36 @@ def show_accounts() -> None:
 
 ### Agent Model Used
 
-_to be filled by dev agent_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+- `uv init --app --package bank` created a nested `bank/` subdirectory instead of initializing in-place. Resolved by moving pyproject.toml, .python-version, and src/bank/ to project root, then removing the nested directory.
+- `uv_build` was used as build backend (as noted in story Dev Notes). Added `[tool.uv.build-backend]` with `module-name = "bank"` and `source = "src"` to ensure the package is found correctly.
+- typer `registered_commands` stores `cmd.name = None` at decoration time; names are derived from callback `__name__` at invocation. Test adapted to derive CLI names via the same `__name__.replace("_", "-")` convention.
+
 ### Completion Notes List
 
+- All 6 tasks and 17 subtasks complete.
+- 9 tests written covering: exception hierarchy, Pydantic model fields, Protocol class membership, typer app instance, four CLI commands, and Protocol markers for repository/service.
+- `uv sync` completes cleanly; `uv run bank --help` lists all four commands.
+- `ruff check src/` exits 0; `mypy --strict src/` exits 0 (6 source files).
+- Full test suite: 9 passed, 89% coverage.
+
 ### File List
+
+- `pyproject.toml` — new: full project config with deps, scripts, tool config
+- `.python-version` — new: Python version pin (>=3.12)
+- `src/bank/__init__.py` — new: empty package init
+- `src/bank/exceptions.py` — new: BankError hierarchy stubs
+- `src/bank/model.py` — new: Account Pydantic BaseModel stub
+- `src/bank/repository.py` — new: AccountRepository Protocol stub
+- `src/bank/service.py` — new: BankService Protocol stub
+- `src/bank/cli.py` — new: typer app with 4 command stubs
+- `tests/__init__.py` — new: empty test package init
+- `tests/conftest.py` — new: empty conftest placeholder
+- `tests/test_scaffold.py` — new: 9 tests covering all module stubs and CLI
+
+## Change Log
+
+- 2026-03-30: Story 1.1 implemented — project scaffold complete. Created pyproject.toml with all required deps and tool config, 5 module stubs (exceptions, model, repository, service, cli), tests/ scaffold, and verified all quality gates (ruff, mypy --strict, pytest, uv run bank --help).
