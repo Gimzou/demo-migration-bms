@@ -32,19 +32,31 @@ The migration is planned through three BMad phases:
 
 ## Implementation pipeline
 
-Implementation is driven by a `/story-pipeline` skill orchestrated by a BMad master agent. The pipeline chains two sub-agents in a develop-then-review loop. It can run one story at a time or chain all stories of an epic in sequence.
+Implementation is driven by the `/story-pipeline` skill (`.claude/skills/story-pipeline/`). The pipeline is fully autonomous — it runs without user interaction unless a story exceeds 3 dev/QA iterations or hits an unrecoverable error.
 
-1. **Story-to-Code** — `bmad-agent-dev`
-   - Input: a single User Story
-   - Output: Python source code + pytest unit tests
-   - Produce working code that satisfies all acceptance criteria
+> **Note:** Skill design is an emerging technique to enhance agent behavior. Quality documentation can be retrieved from [Anthropic](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview#open-source-skills) and [cc.bruniaux.com/guide](https://cc.bruniaux.com/guide/ultimate-guide/05-skills/#53-skill-template).
 
-2. **Code-to-Review** — `bmad-agent-qa`
-   - Input: code from step 1 + the original User Story
-   - Output: corrected source code
-   - Verify PEP 8 compliance, correct Pydantic usage, adherence to AC — auto-fix any issues found
+### Invocation
 
-> **Note:** Skill design is an emerging technic to enhance agent behavior. Quality documentation for skill design can be retrieved from [Anthropic](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview#open-source-skills) and [cc.bruniaux.com/guide](https://cc.bruniaux.com/guide/ultimate-guide/05-skills/#53-skill-template) websites.
+| Command | Behavior |
+|---------|----------|
+| `/story-pipeline` | Auto-discovers the next `ready-for-dev` story |
+| `/story-pipeline path/to/story.md` | Runs a single specific story |
+| `/story-pipeline epic-N` | Chains all ready stories of that epic in order |
+
+### Per-story loop
+
+1. **Dev** — `bmad-dev-story` (Amelia): implements the story; story reaches `review` status
+2. **QA** — `bmad-agent-qa` (Quinn) in pipeline mode: runs `ruff --fix`, `mypy --strict`, `pytest`, and verifies each AC; auto-fixes what it can
+3. **Outcome check**: `clean` (all tests pass, all ACs met, zero ruff violations) → advance; `needs-rework` → loop back to step 1
+4. After 3 failed iterations → escalate: extend / skip / halt
+
+### Escalation
+
+The pipeline only interrupts when:
+- A story exhausts all 3 iterations without reaching clean status
+- An unrecoverable error occurs (missing story file, broken test environment, conflicting ACs)
+- The full pipeline completes
 
 ## Technical objectives
 
