@@ -3,8 +3,8 @@
     "allow": [
       "WebSearch",
       "WebFetch",
-      "Bash(uv:*)",
-      "Bash(git:*)"
+      "Bash(uv *)",
+      "Bash(git *)"
     ]
   },
   "hooks": {
