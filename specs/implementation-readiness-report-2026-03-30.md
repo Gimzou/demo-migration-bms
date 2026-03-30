@@ -140,16 +140,9 @@ None. Absence of a UX document is appropriate for this project type.
 
 ### 🟠 Major Issues
 
-**Issue 1: Missing `service.py` / `BankServiceImpl` implementation story**
+**Issue 1: Missing `service.py` / `BankServiceImpl` implementation story** ✅ RESOLVED
 
-No story in Epic 1 or Epic 2 explicitly creates `service.py` containing the `BankService` Protocol and `BankServiceImpl` class. The gap manifests in two places:
-
-- Story 1.5 AC: *"cli.py wires `BankServiceImpl(JsonFileAccountRepository())` as the composition root"* — but `BankServiceImpl` has no story that creates it.
-- Story 3.2 AC: *"tests/test_service.py covers `create_account` success, `DuplicateAccountError` on duplicate…"* — the service is tested but never explicitly built.
-
-**Impact:** A developer picking up Story 2.1 would not know where `BankServiceImpl` should be defined. If assumed to be built incrementally across Stories 2.1–2.4 (each command adds a method), the epics file should state this explicitly.
-
-**Recommendation:** Either (a) add a Story 2.0 "Service Layer Scaffold" (BankService Protocol + BankServiceImpl stub) at the start of Epic 2, or (b) add a note in Story 1.5 and each Epic 2 story stating that `BankServiceImpl` methods are created incrementally in each story. The gap must be resolved in the story text before implementation begins.
+~~No story in Epic 1 or Epic 2 explicitly creates `service.py`~~ — **Fixed during this assessment session** by adding Story 2.0 "BankService Protocol & BankServiceImpl Scaffold" to Epic 2. Story 2.0 creates `service.py` with the `BankService` Protocol and a stub `BankServiceImpl` (methods raise `NotImplementedError`). Stories 2.1–2.4 then replace stubs with real implementations incrementally.
 
 ---
 
@@ -189,7 +182,7 @@ Story 2.1 AC: *"a subsequent `show-accounts` invocation lists the created accoun
 
 ### Overall Readiness Status
 
-**NEEDS WORK** — One major gap must be resolved before implementation begins. All other findings are minor and acceptable in the context of this brownfield migration.
+**READY** — The one major gap (missing service layer story) was resolved by adding Story 2.0 to Epic 2 during the assessment session. All remaining findings are minor and acceptable in the context of this brownfield migration.
 
 ---
 

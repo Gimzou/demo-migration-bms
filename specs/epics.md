@@ -88,6 +88,7 @@ After this epic, any developer can clone the repo, run `uv sync`, and execute `u
 After this epic, the CLI operator can create accounts, deposit and withdraw funds, and list all accounts with formatted output. All business rules are enforced and all error messages are specific, field-named, and actionable.
 **FRs covered:** FR-1, FR-2, FR-3, FR-4
 **NFRs addressed:** NFR-4 (Pydantic validation architecture), NFR-5 (error message quality)
+**Stories:** 2.0 (service scaffold), 2.1 (create-account), 2.2 (deposit), 2.3 (withdraw), 2.4 (show-accounts)
 
 ### Epic 3: Migration Quality Assurance
 
@@ -212,6 +213,26 @@ So that I can learn the available commands and their arguments without reading s
 ## Epic 2: Core Banking Operations
 
 After this epic, the CLI operator can create accounts, deposit and withdraw funds, and list all accounts with formatted output. All business rules are enforced and all error messages are specific, field-named, and actionable.
+
+### Story 2.0: BankService Protocol & BankServiceImpl Scaffold
+
+As a developer,
+I want a `BankService` Protocol and a concrete `BankServiceImpl` stub wired into the CLI,
+So that Banking Operations stories (2.1–2.4) have a clearly defined place to add business logic.
+
+**Acceptance Criteria:**
+
+**Given** `src/bank/service.py` exists,
+**When** it is inspected,
+**Then** it defines a `BankService` Protocol with method signatures for `create_account`, `deposit`, `withdraw`, and `get_all_accounts`
+**And** `BankServiceImpl` is a concrete class that satisfies `BankService` without inheriting from it
+**And** each method raises `NotImplementedError` at this stage (to be replaced in Stories 2.1–2.4)
+**And** `BankServiceImpl.__init__` accepts an `AccountRepository` parameter
+
+**Given** `src/bank/cli.py` is inspected,
+**When** the composition root is reviewed,
+**Then** the `typer` app wires `BankServiceImpl(JsonFileAccountRepository())` as the service instance passed to each command
+**And** `ruff check src/` and `mypy --strict src/` pass with `service.py` in place
 
 ### Story 2.1: Create Account Command
 
