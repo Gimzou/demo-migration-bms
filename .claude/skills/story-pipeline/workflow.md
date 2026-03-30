@@ -2,12 +2,20 @@
 
 **Goal:** Autonomously chain the develop and QA-review phases for a story or a full epic, with no user interaction unless escalation is required.
 
-**Your Role:** Pipeline orchestrator. You sequence the work, read outcomes from story file state, and decide whether to advance, loop, or escalate. You never implement code yourself — you delegate to sub-skills.
+**Your Role:** Pipeline orchestrator. You spawn isolated subagents for each phase, read outcomes from story file state and agent return messages, and decide whether to advance, loop, or escalate. You never implement code yourself.
 
 **Automation contract:** Do NOT halt to ask the user for decisions during dev or QA phases. Only halt when:
 - A story exceeds `max_iterations` without reaching "clean" status
-- An unrecoverable error occurs (missing file, broken test environment, conflicting ACs)
+- An unrecoverable error is reported by a subagent
 - All stories are done (pipeline complete)
+
+**Agent architecture:**
+Each phase spawns an isolated subagent via the Agent tool (`subagent_type: "general-purpose"`).
+`general-purpose` is the correct type: both phases need full tool access (Read, Write, Edit, Bash).
+BMad persona and workflow instructions are injected through the prompt — the subagent reads the
+relevant skill file and follows it, effectively becoming Amelia or Quinn in an isolated context.
+The orchestrator communicates with subagents through file state (story file Status field) and
+the agent's return message — not through shared memory.
 
 ---
 
@@ -45,7 +53,7 @@ Derive `mode` and `story_list`:
 
 <workflow>
   <critical>Operate fully autonomously — do NOT halt during dev or QA phases unless an escalation condition is triggered.</critical>
-  <critical>Base loop decisions on story file status — it is the authoritative source of truth after each phase.</critical>
+  <critical>Base loop decisions on story file status AND the subagent's return message — both are authoritative.</critical>
   <critical>Communicate all responses in {communication_language}.</critical>
 
   <step n="1" goal="Discover stories and present the execution plan">
@@ -56,7 +64,7 @@ Derive `mode` and `story_list`:
       <check if="no ready-for-dev story found">
         <output>📋 No `ready-for-dev` story found in sprint status. Pipeline has nothing to run.
 
-          Check `{sprint_status}` to see current story states, or run `bmad-agent-sm` to prepare stories.
+Check `{sprint_status}` to see current story states, or run `bmad-agent-sm` to prepare stories.
         </output>
         <action>HALT</action>
       </check>
@@ -79,7 +87,7 @@ Derive `mode` and `story_list`:
       <check if="no eligible stories found">
         <output>📋 No `ready-for-dev` or `in-progress` stories found for `{raw_target}`.
 
-          All stories may already be done, or none have been prepared yet.
+All stories may already be done, or none have been prepared yet.
         </output>
         <action>HALT</action>
       </check>
@@ -87,7 +95,6 @@ Derive `mode` and `story_list`:
       <action>Set `story_list` = [ordered list of story file paths]</action>
     </check>
 
-    <!-- Present the plan -->
     <action>Count total stories: `total_stories` = length of `story_list`</action>
     <output>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -98,14 +105,14 @@ Derive `mode` and `story_list`:
 {story_list_formatted}
 
 **Per-story flow:**
-  1. 🛠  Dev phase — Amelia implements the story (bmad-dev-story)
-  2. 🔍  QA phase — Quinn reviews and auto-corrects (pipeline mode, no halts)
+  1. 🛠  Dev subagent  — general-purpose agent running bmad-dev-story (Amelia)
+  2. 🔍  QA subagent   — general-purpose agent running Quinn's review protocol
   3. 🔁  Loop if issues remain — up to {max_iterations} iterations per story
-  4. ✅  Advance — when story tests pass and all ACs are satisfied
+  4. ✅  Advance — when story file status is "done"
 
 **Escalation triggers:**
   ⚠️  After {max_iterations} iterations without a clean story
-  ⚠️  Unrecoverable error (broken environment, conflicting ACs)
+  ⚠️  Subagent reports an unrecoverable blocker
 
 Starting now…
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -129,84 +136,200 @@ Starting now…
 
       <while not story_done and iteration <= max_iterations>
 
-        <output>
-🛠 **Iteration {iteration}/{max_iterations} — Dev Phase**
-Invoking `bmad-dev-story` for: `{current_story}`
-        </output>
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!--  DEV PHASE                                                          -->
+        <!--  Spawn an isolated general-purpose subagent injected with the      -->
+        <!--  bmad-dev-story workflow. The subagent reads the workflow file and  -->
+        <!--  follows it as Amelia, in its own fresh context window.            -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
 
-        <!-- DEV PHASE -->
-        <!-- Invoke bmad-dev-story. Pass the story path directly so the workflow skips auto-discovery. -->
-        <!-- bmad-dev-story runs its full workflow (Steps 1–10). When it reaches Step 10 completion, -->
-        <!-- the story file status is set to "review" and the dev workflow is done.                  -->
-        <!-- At that point, return here and proceed to the QA phase.                                -->
-        <action>Invoke skill `bmad-dev-story` with story_path = `{current_story}`</action>
-        <!-- dev-story workflow executes fully here; story status → "review" on success -->
+        <output>🛠 **Iteration {iteration}/{max_iterations} — Dev subagent** → `{current_story}`</output>
 
-        <output>
-🔍 **Iteration {iteration}/{max_iterations} — QA Phase**
-Quinn reviewing: `{current_story}`
-Running autonomous review (PEP 8, Pydantic patterns, AC verification, tests)…
-        </output>
+        <action>
+          Use the Agent tool with:
+            subagent_type: "general-purpose"
+            run_in_background: false
+            description: "Dev: implement {story_key}"
+            prompt: |
+              You are Amelia, a senior software engineer. Your sole task is to implement
+              the user story at `{current_story}` and leave the codebase in a working state.
 
-        <!-- QA PHASE — inline autonomous review, no user halts -->
-        <!-- Quinn's pipeline-mode review protocol:                                                  -->
-        <!--   1. Read story file: extract Acceptance Criteria list and File List                   -->
-        <!--   2. Run: uv run ruff check <files> --fix  → auto-correct PEP 8 / style violations    -->
-        <!--   3. Run: uv run mypy --strict <files>     → document type errors (do not auto-fix)   -->
-        <!--   4. Run: uv run pytest --tb=short         → capture pass/fail output                  -->
-        <!--   5. For each AC: confirm it is satisfied by reading the implementation                -->
-        <!--   6. Collect remaining issues that could not be auto-fixed                            -->
-        <!--   7. Determine outcome:                                                                 -->
-        <!--       "clean"        = all tests pass + all ACs satisfied + ruff zero violations       -->
-        <!--       "needs-rework" = list of unresolved issues (mypy errors, test failures, open AC) -->
-        <!-- DO NOT halt for user decisions. Auto-fix what is fixable; document the rest.          -->
-        <action>Act as Quinn (bmad-agent-qa) in pipeline mode. Execute the QA review protocol above on story `{current_story}`. Produce outcome: "clean" or "needs-rework" with issue list.</action>
+              ## Workflow
 
-        <!-- Read outcome from story file state + QA findings -->
-        <check if="QA outcome == 'clean'">
+              Read `.claude/skills/bmad-dev-story/workflow.md` in full, then follow it exactly
+              for the story at `{current_story}`. The workflow is your authoritative guide.
+
+              Key rules (do not skip):
+              - Read the COMPLETE story file before touching any code
+              - Execute ALL tasks and subtasks in the order written — no reordering
+              - Write tests first (red → green → refactor)
+              - Run `uv run pytest` after every task — never proceed with failing tests
+              - Mark tasks [x] ONLY when implementation AND tests are complete and passing
+              - Update story file: task checkboxes, Dev Agent Record, File List, Change Log
+              - Set story Status to "review" when all tasks are complete
+
+              ## Project context
+              - Story file:              {current_story}
+              - Implementation artifacts: {implementation_artifacts}
+              - Sprint status:            {sprint_status}
+              - Test command:             uv run pytest
+              - Lint command:             uv run ruff check src/
+
+              ## Autonomy contract
+              Do NOT halt for user input. If you hit an unrecoverable blocker (dependency
+              requiring user approval, genuinely conflicting ACs), write the problem to the
+              story file Dev Agent Record → Debug Log, set Status to "blocked", and return
+              a failure message.
+
+              ## Return format (end your response with exactly these lines):
+              STATUS: done | blocked
+              STORY: {story_key}
+              TASKS_COMPLETED: N/M
+              TESTS_WRITTEN: N
+              BLOCKER: <one-line description, or "none">
+        </action>
+
+        <!-- Read story file state after the Dev subagent returns -->
+        <action>Read `{current_story}` and extract current Status field → `dev_status`</action>
+
+        <check if="dev agent return STATUS == 'blocked' OR dev_status == 'blocked'">
+          <output>
+⛔ **Dev subagent reported a blocker — {story_key}**
+
+{dev_agent_return_message}
+
+What would you like to do?
+1. **Investigate and retry** — fix the blocker manually, then extend iterations
+2. **Skip** — mark story as "blocked" and continue with the next story
+3. **Halt** — stop the pipeline here for manual investigation
+          </output>
+          <ask>Choose [1], [2], or [3]:</ask>
+
+          <check if="user chooses '1'">
+            <action>Set `max_iterations` = `max_iterations` + 3 for this story only</action>
+            <action>Set `iteration` = `iteration` + 1</action>
+            <output>Continuing after manual fix…</output>
+          </check>
+          <check if="user chooses '2'">
+            <action>Update story file Status to "blocked"</action>
+            <check if="`{sprint_status}` file exists">
+              <action>Update `development_status[{story_key}]` = "blocked"; update `last_updated` = `{date}`; save</action>
+            </check>
+            <action>Set `story_done` = true</action>
+            <action>Append to `pipeline_results`: {story: `{story_key}`, result: "blocked", iterations: `{iteration}`}</action>
+            <output>⏭ Skipping `{story_key}`. Moving to next story.</output>
+          </check>
+          <check if="user chooses '3'">
+            <action>HALT: "Pipeline paused at `{story_key}`. Resume when the blocker is resolved."</action>
+          </check>
+          <!-- Skip QA phase for this iteration -->
+          <action>Skip to next while iteration</action>
+        </check>
+
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+        <!--  QA PHASE                                                           -->
+        <!--  Spawn an isolated general-purpose subagent running Quinn's review  -->
+        <!--  protocol. Auto-fixes ruff violations; reports remaining issues.   -->
+        <!-- ═══════════════════════════════════════════════════════════════════ -->
+
+        <output>🔍 **Iteration {iteration}/{max_iterations} — QA subagent** → `{current_story}`</output>
+
+        <action>
+          Use the Agent tool with:
+            subagent_type: "general-purpose"
+            run_in_background: false
+            description: "QA: review {story_key}"
+            prompt: |
+              You are Quinn, a QA engineer running an automated quality review.
+              Your task is to verify and correct the implementation of story `{story_key}`
+              at `{current_story}`.
+
+              ## QA Protocol (execute fully — no user halts)
+
+              1. Read the story file at `{current_story}`:
+                 - Extract the full Acceptance Criteria list
+                 - Extract the File List (all implemented source files)
+
+              2. Run: `uv run ruff check src/ --fix`
+                 Auto-corrects PEP 8 and style violations in-place.
+                 Run a second time to confirm zero remaining violations.
+
+              3. Run: `uv run mypy --strict src/`
+                 Document all type errors. Do NOT auto-fix — type errors require
+                 developer judgment and must be reported as issues.
+
+              4. Run: `uv run pytest --tb=short`
+                 Capture full pass/fail output.
+
+              5. For each Acceptance Criterion in the story file:
+                 Read the implementation and verify it is satisfied.
+                 Mark each AC as ✅ satisfied or ❌ unsatisfied (with a reason).
+
+              6. Determine outcome:
+                 "clean"        = ALL tests pass AND all ACs satisfied AND ruff
+                                  reports zero violations after auto-fix
+                 "needs-rework" = ANY failing tests OR unsatisfied AC OR mypy error
+                                  that indicates incorrect behaviour (not just style)
+
+              7. Update the story file:
+                 - "clean":        set Status to "done"
+                 - "needs-rework": set Status to "in-progress"; write all unresolved
+                                   issues as a bulleted list under
+                                   Dev Agent Record → Debug Log
+
+              ## Project context
+              - Story file:              {current_story}
+              - Implementation artifacts: {implementation_artifacts}
+
+              ## Autonomy contract
+              Do NOT halt for user input. Auto-fix only what is safe (ruff --fix).
+              Document everything else and return.
+
+              ## Return format (end your response with exactly these lines):
+              STATUS: clean | needs-rework
+              STORY: {story_key}
+              RUFF_FIXES: N
+              TESTS: N passed / M failed
+              ACS: N/M satisfied
+              ISSUES: <bulleted list of unresolved issues, or "none">
+        </action>
+
+        <!-- Read story file state after the QA subagent returns -->
+        <action>Read `{current_story}` and extract current Status field → `qa_status`</action>
+
+        <check if="QA agent return STATUS == 'clean' OR qa_status == 'done'">
           <action>Set `story_done` = true</action>
-
-          <!-- Update story file and sprint status to "done" -->
-          <action>Update story file Status section to "done"</action>
           <check if="`{sprint_status}` file exists">
             <action>Load FULL `{sprint_status}`</action>
-            <action>Update `development_status[{story_key}]` = "done"</action>
-            <action>Update `last_updated` = `{date}`</action>
-            <action>Save file, preserving ALL comments and structure</action>
+            <action>Update `development_status[{story_key}]` = "done"; update `last_updated` = `{date}`; save</action>
           </check>
-
           <action>Append to `pipeline_results`: {story: `{story_key}`, result: "done", iterations: `{iteration}`}</action>
-
-          <output>✅ **Story {story_key} — Clean** after {iteration} iteration(s)
-All tests pass, all ACs satisfied, zero ruff violations. Advancing.
+          <output>✅ **{story_key} — Clean** after {iteration} iteration(s)
+{qa_agent_return_message}
           </output>
         </check>
 
-        <check if="QA outcome == 'needs-rework'">
-          <action>Write the unresolved issue list into the story file's Dev Agent Record → Debug Log</action>
+        <check if="QA agent return STATUS == 'needs-rework'">
 
           <check if="iteration < max_iterations">
             <action>Set `iteration` = `iteration` + 1</action>
-            <output>🔁 QA found issues — looping back to development (iteration {iteration}/{max_iterations})
-Unresolved: {issue_summary}
+            <output>🔁 Issues remain — re-spawning Dev subagent (iteration {iteration}/{max_iterations})
+{qa_issues_summary}
             </output>
           </check>
 
           <check if="iteration >= max_iterations">
-            <!-- Escalation — only user halt in the pipeline -->
             <output>
 ⚠️ **Escalation Required — {story_key}**
 
-Story has gone through {max_iterations} dev/QA iterations without reaching clean status.
+Story has completed {max_iterations} dev/QA iterations without reaching clean status.
 
 **Remaining unresolved issues:**
-{issue_list_formatted}
+{qa_issues_formatted}
 
 **Story file:** `{current_story}`
-**Sprint status:** `{sprint_status}`
 
 What would you like to do?
-
 1. **Extend** — allow 3 more iterations (pipeline continues autonomously)
 2. **Skip** — mark story as "blocked" and continue with the next story
 3. **Halt** — stop the pipeline here for manual investigation
@@ -214,26 +337,24 @@ What would you like to do?
             <ask>Choose [1], [2], or [3]:</ask>
 
             <check if="user chooses '1'">
-              <action>Set `max_iterations` = `max_iterations` + 3 for `{current_story}` only</action>
+              <action>Set `max_iterations` = `max_iterations` + 3 for this story only</action>
               <action>Set `iteration` = `iteration` + 1</action>
-              <output>Extended iteration limit. Continuing…</output>
+              <output>Extended. Continuing…</output>
             </check>
-
             <check if="user chooses '2'">
               <action>Update story file Status to "blocked"</action>
               <check if="`{sprint_status}` file exists">
-                <action>Update `development_status[{story_key}]` = "blocked" in `{sprint_status}`</action>
-                <action>Update `last_updated` = `{date}`</action>
+                <action>Update `development_status[{story_key}]` = "blocked"; update `last_updated` = `{date}`; save</action>
               </check>
-              <action>Set `story_done` = true (skip flag)</action>
+              <action>Set `story_done` = true</action>
               <action>Append to `pipeline_results`: {story: `{story_key}`, result: "blocked", iterations: `{iteration}`}</action>
               <output>⏭ Skipping `{story_key}`. Moving to next story.</output>
             </check>
-
             <check if="user chooses '3'">
-              <action>HALT: "Pipeline paused at story `{story_key}` after `{iteration}` iterations. Resume when ready."</action>
+              <action>HALT: "Pipeline paused at `{story_key}` after {iteration} iterations. Resume when ready."</action>
             </check>
           </check>
+
         </check>
 
       </while>
@@ -243,8 +364,8 @@ What would you like to do?
   </step>
 
   <step n="3" goal="Pipeline completion report">
-    <action>Tally results from `pipeline_results`:
-      - `done_count` = stories with result "done"
+    <action>Tally from `pipeline_results`:
+      - `done_count`    = stories with result "done"
       - `blocked_count` = stories with result "blocked"
     </action>
 
@@ -259,11 +380,6 @@ What would you like to do?
 
 **Per-story breakdown:**
 {pipeline_results_table}
-
-**What just happened (SCRUM context):**
-Each story went through a mini sprint cycle — Amelia coded it, Quinn verified it
-against the Definition of Done (tests, linting, acceptance criteria). Stories marked
-"done" are ready to ship; "blocked" stories need manual review before they can close.
 
 **Suggested next steps:**
 - `bmad-sprint-status` — see the updated sprint board
