@@ -44,6 +44,8 @@ Implementation is driven by a `/story-pipeline` skill orchestrated by a BMad mas
    - Output: corrected source code
    - Verify PEP 8 compliance, correct Pydantic usage, adherence to AC — auto-fix any issues found
 
+> **Note:** Skill design is an emerging technic to enhance agent behavior. Quality documentation for skill design can be retrieved from [Anthropic](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview#open-source-skills) and [cc.bruniaux.com/guide](https://cc.bruniaux.com/guide/ultimate-guide/05-skills/#53-skill-template) websites.
+
 ## Technical objectives
 
 The migration must demonstrate effective adoption of Pydantic as a replacement for Java's manual validation patterns:

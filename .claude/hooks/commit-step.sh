@@ -75,22 +75,40 @@ for file in $impl_files; do
 
     current_status=$(grep '^Status:' "$file" 2>/dev/null | head -1 \
         | sed 's/Status: *//' | tr -d ' ' || true)
-    [[ "$current_status" == "review" || "$current_status" == "done" ]] || continue
 
     previous_status=$(git show "HEAD:$file" 2>/dev/null | grep '^Status:' 2>/dev/null \
         | head -1 | sed 's/Status: *//' | tr -d ' ' || true)
+
+    # Skip if status hasn't changed
     [ "$current_status" = "$previous_status" ] && continue
+
+    # Milestone statuses to commit:
+    #   ready-for-dev — new story scoped by SM (only valid for new files)
+    #   review        — dev complete, ready for QA
+    #   done          — QA signed off
+    is_new_file=false
+    [ -z "$previous_status" ] && is_new_file=true
+
+    if $is_new_file; then
+        [[ "$current_status" == "ready-for-dev" ]] || continue
+    else
+        [[ "$current_status" == "review" || "$current_status" == "done" ]] || continue
+    fi
 
     story_id=$(basename "$file" .md)
 
-    # Stage the story file itself
+    # Stage the story file and sprint-status.yaml (always updated alongside new stories)
     git add "$file"
+    [ -f "$IMPLEMENTATION_DIR/sprint-status.yaml" ] \
+        && git add "$IMPLEMENTATION_DIR/sprint-status.yaml" || true
 
-    # Stage each source file listed in the story's File List section
-    while IFS= read -r src_file; do
-        src_file=$(echo "$src_file" | tr -d '[:space:]')
-        [ -n "$src_file" ] && [ -f "$src_file" ] && git add "$src_file" || true
-    done < <(story_file_list "$file")
+    # For review/done: also stage source files listed in the story's File List section
+    if ! $is_new_file; then
+        while IFS= read -r src_file; do
+            src_file=$(echo "$src_file" | tr -d '[:space:]')
+            [ -n "$src_file" ] && [ -f "$src_file" ] && git add "$src_file" || true
+        done < <(story_file_list "$file")
+    fi
 
     git commit -m "feat($story_id): $current_status"
     echo "Auto-committed: feat($story_id): $current_status" >&2
