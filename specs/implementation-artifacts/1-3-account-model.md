@@ -1,6 +1,6 @@
 # Story 1.3: Account Model
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -21,23 +21,23 @@ so that no invalid `Account` instance can be created anywhere in the system.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Implement `Account` model in `src/bank/model.py` (AC: 1–6)
-  - [ ] Replace the Story 1.1 stub with full Pydantic model
-  - [ ] Add `Field` constraints for `owner` (non-empty) and `balance` (≥ 0)
-  - [ ] Add `@field_validator` for `account_number` (numeric string check)
-  - [ ] Confirm no aliases set (`by_alias` never used)
+- [x] Task 1: Implement `Account` model in `src/bank/model.py` (AC: 1–6)
+  - [x] Replace the Story 1.1 stub with full Pydantic model
+  - [x] Add `Field` constraints for `owner` (non-empty) and `balance` (≥ 0)
+  - [x] Add `@field_validator` for `account_number` (numeric string check)
+  - [x] Confirm no aliases set (`by_alias` never used)
 
-- [ ] Task 2: Write unit tests in `tests/test_model.py` (AC: 1–6)
-  - [ ] Test: valid account created successfully
-  - [ ] Test: non-numeric account number raises `ValidationError`
-  - [ ] Test: empty owner raises `ValidationError`
-  - [ ] Test: negative balance raises `ValidationError`
-  - [ ] Test: `model_dump()` output shape (keys, no aliases)
-  - [ ] Test: `model_validate(model_dump())` round-trip
+- [x] Task 2: Write unit tests in `tests/test_model.py` (AC: 1–6)
+  - [x] Test: valid account created successfully
+  - [x] Test: non-numeric account number raises `ValidationError`
+  - [x] Test: empty owner raises `ValidationError`
+  - [x] Test: negative balance raises `ValidationError`
+  - [x] Test: `model_dump()` output shape (keys, no aliases)
+  - [x] Test: `model_validate(model_dump())` round-trip
 
-- [ ] Task 3: Verify quality gates (AC: 7, 8)
-  - [ ] `ruff check src/` → exit code 0
-  - [ ] `mypy --strict src/` → exit code 0
+- [x] Task 3: Verify quality gates (AC: 7, 8)
+  - [x] `ruff check src/` → exit code 0
+  - [x] `mypy --strict src/` → exit code 0
 
 ## Dev Notes
 
@@ -155,10 +155,23 @@ tests/test_model.py     ← new test file
 
 ### Agent Model Used
 
-_to be filled by dev agent_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+No blockers encountered. Implementation was straightforward following the story Dev Notes exactly.
+
 ### Completion Notes List
 
+- Task 1: Replaced stub `Account` model with full Pydantic v2 implementation using `Field` constraints and `@field_validator` for numeric account number validation. All constraints enforced via Pydantic — no manual `if` guards.
+- Task 2: Created `tests/test_model.py` with 14 unit tests organized in 6 test classes covering all 6 ACs. Tests written first (RED), then implementation made them pass (GREEN). 46/46 tests pass with no regressions.
+- Task 3: `ruff check src/` → exit code 0 (clean). `mypy --strict src/` → exit code 0 (no issues in 6 source files).
+
 ### File List
+
+- `src/bank/model.py` — modified: replaced stub with full `Account` Pydantic model
+- `tests/test_model.py` — created: 14 unit tests for all ACs
+
+## Change Log
+
+- 2026-03-30: Story 1.3 implemented — Account Pydantic model with field constraints and validator; 14 unit tests added; all quality gates pass (ruff, mypy --strict). Status: ready-for-dev → review.
