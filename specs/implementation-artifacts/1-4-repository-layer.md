@@ -1,6 +1,6 @@
 # Story 1.4: Repository Layer
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -20,25 +20,25 @@ so that the service layer can read and write accounts without knowing about file
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Implement `repository.py` (AC: 1–5)
-  - [ ] Replace Story 1.1 stub with full `AccountRepository` Protocol
-  - [ ] Implement `JsonFileAccountRepository` with `accounts.json` persistence
-  - [ ] `find_all()`: return `[]` if file absent; load and deserialize otherwise
-  - [ ] `find_by_id()`: return matching `Account` or `None`
-  - [ ] `exists()`: return `True` if account_number present
-  - [ ] `save()`: read-modify-write — replace existing or append new account
-  - [ ] Accept optional `file_path: Path` in constructor (enables test isolation)
+- [x] Task 1: Implement `repository.py` (AC: 1–5)
+  - [x] Replace Story 1.1 stub with full `AccountRepository` Protocol
+  - [x] Implement `JsonFileAccountRepository` with `accounts.json` persistence
+  - [x] `find_all()`: return `[]` if file absent; load and deserialize otherwise
+  - [x] `find_by_id()`: return matching `Account` or `None`
+  - [x] `exists()`: return `True` if account_number present
+  - [x] `save()`: read-modify-write — replace existing or append new account
+  - [x] Accept optional `file_path: Path` in constructor (enables test isolation)
 
-- [ ] Task 2: Write unit tests in `tests/test_repository.py` (AC: 1–5)
-  - [ ] Test: `find_all()` on missing file returns `[]`
-  - [ ] Test: `save()` + `find_by_id()` round-trip
-  - [ ] Test: `exists()` returns `True` for known ID, `False` for unknown
-  - [ ] Test: persistence across two `JsonFileAccountRepository` instances on the same temp file
-  - [ ] Test: `accounts.json` field names match Python attributes (inspect raw JSON)
+- [x] Task 2: Write unit tests in `tests/test_repository.py` (AC: 1–5)
+  - [x] Test: `find_all()` on missing file returns `[]`
+  - [x] Test: `save()` + `find_by_id()` round-trip
+  - [x] Test: `exists()` returns `True` for known ID, `False` for unknown
+  - [x] Test: persistence across two `JsonFileAccountRepository` instances on the same temp file
+  - [x] Test: `accounts.json` field names match Python attributes (inspect raw JSON)
 
-- [ ] Task 3: Verify quality gates (AC: 6, 7)
-  - [ ] `ruff check src/` → exit code 0
-  - [ ] `mypy --strict src/` → exit code 0
+- [x] Task 3: Verify quality gates (AC: 6, 7)
+  - [x] `ruff check src/` → exit code 0
+  - [x] `mypy --strict src/` → exit code 0
 
 ## Dev Notes
 
@@ -203,10 +203,29 @@ tests/test_repository.py   ← new test file
 
 ### Agent Model Used
 
-_to be filled by dev agent_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+No blockers encountered.
+
 ### Completion Notes List
 
+- Replaced the Story 1.1 stub in `src/bank/repository.py` with the full `AccountRepository` Protocol and complete `JsonFileAccountRepository` implementation.
+- `JsonFileAccountRepository` uses `json.load`/`json.dump` with `model_validate`/`model_dump` (no aliases) for Pydantic round-trips.
+- `find_all()` returns `[]` when the file is absent; `find_by_id()` / `exists()` delegate to it cleanly.
+- `save()` implements read-modify-write: replaces existing entry by `account_number` or appends.
+- Constructor accepts optional `file_path: Path = DEFAULT_FILE` for test isolation via pytest `tmp_path`.
+- 8 unit tests written covering all ACs: missing file, round-trip, None for unknown, exists True/False, cross-instance persistence, raw JSON field names, and update-in-place.
+- Full test suite: 54 tests, 0 failures, 0 regressions.
+- `ruff check src/` — exit code 0.
+- `mypy --strict src/` — exit code 0 (no issues in 6 source files).
+
 ### File List
+
+- `src/bank/repository.py` (modified — replaced stub with full implementation)
+- `tests/test_repository.py` (created — 8 unit tests)
+
+## Change Log
+
+- 2026-03-30: Story 1.4 implemented by Amelia (claude-sonnet-4-6). Replaced repository stub with full `JsonFileAccountRepository` implementation; 8 unit tests added; all ACs satisfied; ruff and mypy --strict exit 0.
