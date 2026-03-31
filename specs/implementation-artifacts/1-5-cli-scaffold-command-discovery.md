@@ -1,6 +1,6 @@
 # Story 1.5: CLI Scaffold & Command Discovery
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -20,26 +20,26 @@ so that I can learn the available commands and their arguments without reading s
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `BankServiceImpl` stub to `src/bank/service.py` (AC: 5)
-  - [ ] Keep the `BankService` Protocol from Story 1.1 stub
-  - [ ] Add `BankServiceImpl` class with `AccountRepository` constructor injection
-  - [ ] All four methods raise `NotImplementedError` (full impl in Epic 2)
+- [x] Task 1: Add `BankServiceImpl` stub to `src/bank/service.py` (AC: 5)
+  - [x] Keep the `BankService` Protocol from Story 1.1 stub
+  - [x] Add `BankServiceImpl` class with `AccountRepository` constructor injection
+  - [x] All four methods raise `NotImplementedError` (full impl in Epic 2)
 
-- [ ] Task 2: Update `src/bank/cli.py` with proper command signatures (AC: 1–5)
-  - [ ] Replace Story 1.1 CLI stub with full scaffold
-  - [ ] Register all four commands with correct argument names and types
-  - [ ] Add `_get_service()` factory wiring `BankServiceImpl(JsonFileAccountRepository())`
-  - [ ] Commands call `_get_service()` — bodies are stubs for now (`pass`)
+- [x] Task 2: Update `src/bank/cli.py` with proper command signatures (AC: 1–5)
+  - [x] Replace Story 1.1 CLI stub with full scaffold
+  - [x] Register all four commands with correct argument names and types
+  - [x] Add `_get_service()` factory wiring `BankServiceImpl(JsonFileAccountRepository())`
+  - [x] Commands call `_get_service()` — bodies are stubs for now (`pass`)
 
-- [ ] Task 3: Verify help output (AC: 1–4)
-  - [ ] `uv run bank --help` → lists all four commands
-  - [ ] `uv run bank create-account --help` → shows `ACCOUNT_NUMBER`, `OWNER`, `INITIAL_BALANCE`
-  - [ ] `uv run bank deposit --help` → shows `ACCOUNT_NUMBER`, `AMOUNT`
-  - [ ] `uv run bank show-accounts --help` → no arguments listed
+- [x] Task 3: Verify help output (AC: 1–4)
+  - [x] `uv run bank --help` → lists all four commands
+  - [x] `uv run bank create-account --help` → shows `ACCOUNT_NUMBER`, `OWNER`, `INITIAL_BALANCE`
+  - [x] `uv run bank deposit --help` → shows `ACCOUNT_NUMBER`, `AMOUNT`
+  - [x] `uv run bank show-accounts --help` → no arguments listed
 
-- [ ] Task 4: Verify quality gates (AC: 6, 7)
-  - [ ] `ruff check src/` → exit code 0
-  - [ ] `mypy --strict src/` → exit code 0
+- [x] Task 4: Verify quality gates (AC: 6, 7)
+  - [x] `ruff check src/` → exit code 0
+  - [x] `mypy --strict src/` → exit code 0
 
 ## Dev Notes
 
@@ -217,10 +217,27 @@ All prior stories must be complete before this one.
 
 ### Agent Model Used
 
-_to be filled by dev agent_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+_No blockers encountered._
+
 ### Completion Notes List
 
+- Task 1: Added `BankServiceImpl` to `src/bank/service.py` with `AccountRepository` constructor injection. All four methods raise `NotImplementedError`. Exception imports added with `# noqa: F401` for Epic 2 readiness. 7 tests written in `tests/test_service.py` (red → green confirmed).
+- Task 2: Replaced Story 1.1 `cli.py` stub with full scaffold. Added `_get_service()` factory wiring `BankServiceImpl(JsonFileAccountRepository())`. `ValidationError` and `BankError` imported with `# noqa: F401` for Epic 2. 9 tests written in `tests/test_cli_scaffold.py` (red → green confirmed).
+- Task 3: Verified all four `--help` outputs manually. All ACs 1–4 confirmed.
+- Task 4: `ruff check src/` → 0 violations. `mypy --strict src/` → 0 issues. ACs 6 and 7 confirmed.
+- Final test suite: 70 tests pass, 100% coverage, 0 ruff/mypy issues.
+
 ### File List
+
+- `src/bank/service.py` — modified (added `BankServiceImpl` class)
+- `src/bank/cli.py` — modified (full scaffold with `_get_service()` and proper imports)
+- `tests/test_service.py` — created (7 tests for `BankServiceImpl`)
+- `tests/test_cli_scaffold.py` — created (9 tests for CLI composition root)
+
+## Change Log
+
+- 2026-03-30: Story 1.5 implemented. Added `BankServiceImpl` stub to `service.py`, replaced CLI stub with full scaffold including `_get_service()` composition root. All four commands discoverable via `--help`. Quality gates (ruff, mypy --strict) pass. 16 new tests written (70 total, 100% coverage).
