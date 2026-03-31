@@ -1,0 +1,42 @@
+[project]
+name = "bank"
+version = "0.1.0"
+description = "Bank Management System — Python migration"
+readme = "README.md"
+authors = [
+    { name = "Arnould Geelhand", email = "arnould.geelhand@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.12,<3",
+    "typer>=0.24,<1",
+]
+
+[project.scripts]
+bank = "bank.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.11.2,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "bank"
+source = "src"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19",
+    "pytest>=9,<10",
+    "pytest-cov",
+    "ruff>=0.15",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.mypy]
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=bank --cov-report=term-missing"
