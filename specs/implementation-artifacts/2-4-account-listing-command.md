@@ -1,6 +1,6 @@
 # Story 2.4: Account Listing Command
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -17,19 +17,19 @@ so that I can see the current state of all accounts at a glance.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Implement `BankServiceImpl.get_all_accounts()` in `src/bank/service.py` (AC: 1, 2, 3)
-  - [ ] Delegate directly to `self._repository.find_all()` and return the result
+- [x] Task 1: Implement `BankServiceImpl.get_all_accounts()` in `src/bank/service.py` (AC: 1, 2, 3)
+  - [x] Delegate directly to `self._repository.find_all()` and return the result
 
-- [ ] Task 2: Implement `show_accounts` command body in `src/bank/cli.py` (AC: 1, 2)
-  - [ ] Call `_get_service().get_all_accounts()`
-  - [ ] If empty list: `typer.echo("No accounts found.")`
-  - [ ] If accounts exist: print header row, then one row per account with aligned columns
-  - [ ] Format balance as `f"{account.balance:.2f}"`
-  - [ ] No try/except needed (method raises no domain exceptions)
+- [x] Task 2: Implement `show_accounts` command body in `src/bank/cli.py` (AC: 1, 2)
+  - [x] Call `_get_service().get_all_accounts()`
+  - [x] If empty list: `typer.echo("No accounts found.")`
+  - [x] If accounts exist: print header row, then one row per account with aligned columns
+  - [x] Format balance as `f"{account.balance:.2f}"`
+  - [x] No try/except needed (method raises no domain exceptions)
 
-- [ ] Task 3: Run quality gates (AC: 4)
-  - [ ] `ruff check src/` → exit code 0
-  - [ ] `mypy --strict src/` → exit code 0
+- [x] Task 3: Run quality gates (AC: 4)
+  - [x] `ruff check src/` → exit code 0
+  - [x] `mypy --strict src/` → exit code 0
 
 ## Dev Notes
 
@@ -149,6 +149,21 @@ claude-sonnet-4-6
 
 ### Debug Log References
 
+_No blockers encountered._
+
 ### Completion Notes List
 
+- Both `BankServiceImpl.get_all_accounts()` and `show_accounts` CLI command were already fully implemented as part of Story 2-1, satisfying all ACs of this story.
+- `get_all_accounts()` in `src/bank/service.py` delegates directly to `self._repository.find_all()`.
+- `show_accounts` in `src/bank/cli.py` prints "No accounts found." for empty list, or a formatted table with dynamic column widths, left-aligned Account Number and Owner, right-aligned Balance (2 decimal places).
+- All 88 existing tests pass with no regressions.
+- `ruff check src/` and `mypy --strict src/` both exit with code 0.
+
 ### File List
+
+- src/bank/service.py (pre-existing implementation verified)
+- src/bank/cli.py (pre-existing implementation verified)
+
+## Change Log
+
+- 2026-04-01: Verified all ACs satisfied by pre-existing implementation from Story 2-1; marked all tasks complete; set status to review. (claude-sonnet-4-6)
