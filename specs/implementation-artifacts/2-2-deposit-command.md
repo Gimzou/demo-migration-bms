@@ -1,6 +1,6 @@
 # Story 2.2: Deposit Command
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -17,22 +17,22 @@ so that I can increase the account balance.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Implement `BankServiceImpl.deposit()` in `src/bank/service.py` (AC: 1, 2, 3)
-  - [ ] Validate `amount > 0` → raise `InvalidAmountError`
-  - [ ] Fetch account via `self._repository.find_by_id(account_number)` → raise `AccountNotFoundError` if `None`
-  - [ ] Compute updated account using `account.model_copy(update={"balance": account.balance + amount})`
-  - [ ] Call `self._repository.save(updated_account)` and return `updated_account`
-  - [ ] Remove `# noqa: F401` from `AccountNotFoundError` and `InvalidAmountError` imports
+- [x] Task 1: Implement `BankServiceImpl.deposit()` in `src/bank/service.py` (AC: 1, 2, 3)
+  - [x] Validate `amount > 0` → raise `InvalidAmountError`
+  - [x] Fetch account via `self._repository.find_by_id(account_number)` → raise `AccountNotFoundError` if `None`
+  - [x] Compute updated account using `account.model_copy(update={"balance": account.balance + amount})`
+  - [x] Call `self._repository.save(updated_account)` and return `updated_account`
+  - [x] Remove `# noqa: F401` from `AccountNotFoundError` and `InvalidAmountError` imports
 
-- [ ] Task 2: Implement `deposit` command body in `src/bank/cli.py` (AC: 1, 2, 3)
-  - [ ] Wrap service call in try/except following the established error-handling pattern
-  - [ ] On success: `typer.echo("Deposit successful.")`
-  - [ ] On `BankError`: `typer.echo(str(exc))` and `raise typer.Exit(1)`
-  - [ ] No `ValidationError` handler needed — deposit has no Pydantic-validated inputs
+- [x] Task 2: Implement `deposit` command body in `src/bank/cli.py` (AC: 1, 2, 3)
+  - [x] Wrap service call in try/except following the established error-handling pattern
+  - [x] On success: `typer.echo("Deposit successful.")`
+  - [x] On `BankError`: `typer.echo(str(exc))` and `raise typer.Exit(1)`
+  - [x] No `ValidationError` handler needed — deposit has no Pydantic-validated inputs
 
-- [ ] Task 3: Run quality gates (AC: 4)
-  - [ ] `ruff check src/` → exit code 0
-  - [ ] `mypy --strict src/` → exit code 0
+- [x] Task 3: Run quality gates (AC: 4)
+  - [x] `ruff check src/` → exit code 0
+  - [x] `mypy --strict src/` → exit code 0
 
 ## Dev Notes
 
@@ -146,6 +146,23 @@ claude-sonnet-4-6
 
 ### Debug Log References
 
+None.
+
 ### Completion Notes List
 
+- Implemented `BankServiceImpl.deposit()` with guard ordering: amount > 0 first, then find_by_id, then save. Uses `model_copy(update={...})` for immutable Pydantic model update.
+- Removed `# noqa: F401` from `AccountNotFoundError` and `InvalidAmountError` imports in `service.py` (both now actively used).
+- Implemented `deposit` CLI command body with `BankError` catch-all; no `ValidationError` handler needed.
+- Replaced stub `test_bank_service_impl_deposit_raises` (NotImplementedError) with 5 correct deposit tests covering: success, account not found, zero amount, negative amount, and no-save-on-invalid-amount.
+- All 77 tests pass; `ruff check src/` and `mypy --strict src/` both exit 0.
+- Line-length fix: split the `InvalidAmountError` f-string across two lines to satisfy 88-char ruff limit.
+
 ### File List
+
+- `src/bank/service.py` — implemented `deposit()`, removed `# noqa: F401` on two imports
+- `src/bank/cli.py` — implemented `deposit` command body
+- `tests/test_service.py` — replaced `test_bank_service_impl_deposit_raises` with 5 deposit tests
+
+## Change Log
+
+- 2026-04-01: Story 2.2 implemented — deposit service logic and CLI command (claude-sonnet-4-6)

@@ -83,15 +83,75 @@ def test_bank_service_impl_create_account_negative_balance() -> None:
         svc.create_account("001", "Alice", -100.0)
 
 
-def test_bank_service_impl_deposit_raises() -> None:
-    """deposit raises NotImplementedError (stub until Epic 2)."""
+def test_bank_service_impl_deposit_success() -> None:
+    """deposit updates balance and persists updated account."""
     from unittest.mock import MagicMock
 
+    from bank.model import Account
+    from bank.service import BankServiceImpl
+
+    mock_repo = MagicMock()
+    existing = Account(account_number="001", owner="Alice", balance=500.0)
+    mock_repo.find_by_id.return_value = existing
+    svc = BankServiceImpl(mock_repo)
+    result = svc.deposit("001", 200.0)
+
+    mock_repo.find_by_id.assert_called_once_with("001")
+    mock_repo.save.assert_called_once()
+    assert result.balance == 700.0
+    assert result.account_number == "001"
+
+
+def test_bank_service_impl_deposit_account_not_found() -> None:
+    """deposit raises AccountNotFoundError when account does not exist."""
+    from unittest.mock import MagicMock
+
+    from bank.exceptions import AccountNotFoundError
+    from bank.service import BankServiceImpl
+
+    mock_repo = MagicMock()
+    mock_repo.find_by_id.return_value = None
+    svc = BankServiceImpl(mock_repo)
+    with pytest.raises(AccountNotFoundError):
+        svc.deposit("999", 100.0)
+
+
+def test_bank_service_impl_deposit_zero_amount() -> None:
+    """deposit raises InvalidAmountError for zero amount."""
+    from unittest.mock import MagicMock
+
+    from bank.exceptions import InvalidAmountError
     from bank.service import BankServiceImpl
 
     svc = BankServiceImpl(MagicMock())
-    with pytest.raises(NotImplementedError):
-        svc.deposit("ACC001", 50.0)
+    with pytest.raises(InvalidAmountError):
+        svc.deposit("001", 0.0)
+
+
+def test_bank_service_impl_deposit_negative_amount() -> None:
+    """deposit raises InvalidAmountError for negative amount."""
+    from unittest.mock import MagicMock
+
+    from bank.exceptions import InvalidAmountError
+    from bank.service import BankServiceImpl
+
+    svc = BankServiceImpl(MagicMock())
+    with pytest.raises(InvalidAmountError):
+        svc.deposit("001", -50.0)
+
+
+def test_bank_service_impl_deposit_balance_not_modified_on_invalid_amount() -> None:
+    """deposit does not call save when amount is invalid."""
+    from unittest.mock import MagicMock
+
+    from bank.exceptions import InvalidAmountError
+    from bank.service import BankServiceImpl
+
+    mock_repo = MagicMock()
+    svc = BankServiceImpl(mock_repo)
+    with pytest.raises(InvalidAmountError):
+        svc.deposit("001", 0.0)
+    mock_repo.save.assert_not_called()
 
 
 def test_bank_service_impl_withdraw_raises() -> None:

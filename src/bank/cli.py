@@ -36,6 +36,12 @@ def create_account(
 @app.command()
 def deposit(account_number: str, amount: float) -> None:
     """Deposit funds into an account."""
+    try:
+        _get_service().deposit(account_number, amount)
+        typer.echo("Deposit successful.")
+    except BankError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(1)
 
 
 @app.command()

@@ -31,3 +31,13 @@
 - Issues:
   - AC4 FAIL: Typer parses `-100.0` as option flag `-1` before Pydantic validation fires. Fix: use `Annotated[float, typer.Argument()]`.
   - AC5 FAIL: `show-accounts` exits silently; `BankServiceImpl.get_all_accounts()` raises NotImplementedError. Needs minimal listing or AC moved to Story 2.4.
+
+## 2-1 — Iteration 2 — Dev
+- Tasks: 3/3
+- Tests written: 1
+- Status: review
+
+### QA verdict: clean ✓
+- Tests: 73 passed / 0 failed
+- ACs: 5/5
+**Story complete after 2 iteration(s).**

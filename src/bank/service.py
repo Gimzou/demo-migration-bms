@@ -1,10 +1,10 @@
 from typing import Protocol
 
 from bank.exceptions import (
-    AccountNotFoundError,  # noqa: F401  (used in Stories 2.2–2.3)
+    AccountNotFoundError,
     DuplicateAccountError,
     InsufficientBalanceError,  # noqa: F401  (used in Story 2.3)
-    InvalidAmountError,  # noqa: F401  (used in Stories 2.2–2.3)
+    InvalidAmountError,
 )
 from bank.model import Account
 from bank.repository import AccountRepository
@@ -42,7 +42,19 @@ class BankServiceImpl:
         return account
 
     def deposit(self, account_number: str, amount: float) -> Account:
-        raise NotImplementedError
+        if amount <= 0:
+            raise InvalidAmountError(
+                "Invalid amount: deposit amount must be greater than 0,"
+                f" got {amount:.2f}."
+            )
+        account = self._repository.find_by_id(account_number)
+        if account is None:
+            raise AccountNotFoundError(
+                f"Account not found: no account with number {account_number}."
+            )
+        updated = account.model_copy(update={"balance": account.balance + amount})
+        self._repository.save(updated)
+        return updated
 
     def withdraw(self, account_number: str, amount: float) -> Account:
         raise NotImplementedError
