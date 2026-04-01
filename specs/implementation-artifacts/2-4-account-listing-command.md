@@ -1,6 +1,6 @@
 # Story 2.4: Account Listing Command
 
-Status: review
+Status: done
 
 ## Story
 

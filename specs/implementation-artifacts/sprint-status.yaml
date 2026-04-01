@@ -58,7 +58,7 @@ development_status:
   2-1-create-account-command: done
   2-2-deposit-command: done
   2-3-withdrawal-command: done
-  2-4-account-listing-command: review
+  2-4-account-listing-command: done
   epic-2-retrospective: optional
 
   # Epic 3: Migration Quality Assurance
