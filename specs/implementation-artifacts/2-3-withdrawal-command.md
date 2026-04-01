@@ -1,6 +1,6 @@
 # Story 2.3: Withdrawal Command
 
-Status: review
+Status: done
 
 ## Story
 
