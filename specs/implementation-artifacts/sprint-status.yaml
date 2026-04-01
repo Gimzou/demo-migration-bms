@@ -56,7 +56,7 @@ development_status:
   epic-2: in-progress
   2-0-bankservice-protocol-bankserviceimpl-scaffold: ready-for-dev
   2-1-create-account-command: ready-for-dev
-  2-2-deposit-command: backlog
+  2-2-deposit-command: ready-for-dev
   2-3-withdrawal-command: backlog
   2-4-account-listing-command: backlog
   epic-2-retrospective: optional
