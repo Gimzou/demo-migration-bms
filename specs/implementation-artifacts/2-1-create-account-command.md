@@ -1,6 +1,6 @@
 # Story 2.1: Create Account Command
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -18,22 +18,22 @@ so that I can start managing funds for a new customer.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Implement `BankServiceImpl.create_account()` in `src/bank/service.py` (AC: 1, 2, 3, 4)
-  - [ ] Check duplicate: if `self._repository.exists(account_number)` → raise `DuplicateAccountError`
-  - [ ] Construct `Account(account_number=account_number, owner=owner, balance=initial_balance)` — Pydantic validates at construction time
-  - [ ] Call `self._repository.save(account)` then return `account`
-  - [ ] Remove `# noqa: F401` from `DuplicateAccountError` import (it is now used); keep it on the others
+- [x] Task 1: Implement `BankServiceImpl.create_account()` in `src/bank/service.py` (AC: 1, 2, 3, 4)
+  - [x] Check duplicate: if `self._repository.exists(account_number)` → raise `DuplicateAccountError`
+  - [x] Construct `Account(account_number=account_number, owner=owner, balance=initial_balance)` — Pydantic validates at construction time
+  - [x] Call `self._repository.save(account)` then return `account`
+  - [x] Remove `# noqa: F401` from `DuplicateAccountError` import (it is now used); keep it on the others
 
-- [ ] Task 2: Implement `create_account` command body in `src/bank/cli.py` (AC: 1, 2, 3, 4)
-  - [ ] Wrap service call in try/except following the established error-handling pattern
-  - [ ] On success: `typer.echo("Account created successfully.")`
-  - [ ] On `ValidationError`: extract and print first error message (strip `"Value error, "` prefix)
-  - [ ] On `BankError`: print `str(exc)` and exit 1
-  - [ ] Remove `# noqa: F401` from `ValidationError` and `BankError` imports (both are now used)
+- [x] Task 2: Implement `create_account` command body in `src/bank/cli.py` (AC: 1, 2, 3, 4)
+  - [x] Wrap service call in try/except following the established error-handling pattern
+  - [x] On success: `typer.echo("Account created successfully.")`
+  - [x] On `ValidationError`: extract and print first error message (strip `"Value error, "` prefix)
+  - [x] On `BankError`: print `str(exc)` and exit 1
+  - [x] Remove `# noqa: F401` from `ValidationError` and `BankError` imports (both are now used)
 
-- [ ] Task 3: Run quality gates (AC: implicitly required by NFR-1 and NFR-2)
-  - [ ] `ruff check src/` → exit code 0
-  - [ ] `mypy --strict src/` → exit code 0
+- [x] Task 3: Run quality gates (AC: implicitly required by NFR-1 and NFR-2)
+  - [x] `ruff check src/` → exit code 0
+  - [x] `mypy --strict src/` → exit code 0
 
 ## Dev Notes
 
@@ -151,6 +151,20 @@ claude-sonnet-4-6
 
 ### Debug Log References
 
+_No blockers encountered._
+
 ### Completion Notes List
 
+- Task 1 (service.py): Implemented `BankServiceImpl.create_account()` following the two-tier validation strategy. Duplicate check runs before `Account(...)` construction, raising `DuplicateAccountError` (a `BankError`). Pydantic handles field-level validation (non-numeric account_number → `ValidationError`, negative balance → `ValidationError`). Updated import block: `DuplicateAccountError` is active; `AccountNotFoundError`, `InsufficientBalanceError`, `InvalidAmountError` keep `# noqa: F401` comments for future stories. Updated `test_service.py`: replaced the `NotImplementedError` test with 4 new tests covering success path, duplicate detection, invalid account number, and negative balance.
+- Task 2 (cli.py): Implemented `create_account` command body with try/except pattern. `ValidationError` → extracts first error message, strips `"Value error, "` prefix, echoes, exits 1. `BankError` → echoes `str(exc)`, exits 1. Removed `# noqa: F401` from both `ValidationError` and `BankError` imports.
+- Task 3 (quality gates): `ruff check src/` → exit 0. `mypy --strict src/` → exit 0. Full test suite: 73 tests passed (no regressions).
+
 ### File List
+
+- `src/bank/service.py` — implemented `create_account()`, updated import block `# noqa` comments
+- `src/bank/cli.py` — implemented `create_account` command body, removed `# noqa: F401` from active imports
+- `tests/test_service.py` — replaced `test_bank_service_impl_create_account_raises` (NotImplementedError) with 4 new tests for the implemented behaviour
+
+### Change Log
+
+- 2026-04-01: Story 2.1 implemented — `BankServiceImpl.create_account()` and `create_account` CLI command body. 4 new service tests added, all 73 tests pass, ruff and mypy --strict clean.

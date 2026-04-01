@@ -19,15 +19,68 @@ def test_bank_service_impl_accepts_repository() -> None:
     assert svc is not None
 
 
-def test_bank_service_impl_create_account_raises() -> None:
-    """create_account raises NotImplementedError (stub until Epic 2)."""
+def test_bank_service_impl_create_account_persists() -> None:
+    """create_account saves a valid Account via the repository and returns it."""
     from unittest.mock import MagicMock
+
+    from bank.model import Account
+    from bank.service import BankServiceImpl
+
+    mock_repo = MagicMock()
+    mock_repo.exists.return_value = False
+    svc = BankServiceImpl(mock_repo)
+    account = svc.create_account("001", "Alice", 500.0)
+
+    mock_repo.exists.assert_called_once_with("001")
+    mock_repo.save.assert_called_once_with(account)
+    assert isinstance(account, Account)
+    assert account.account_number == "001"
+    assert account.owner == "Alice"
+    assert account.balance == 500.0
+
+
+def test_bank_service_impl_create_account_duplicate_raises() -> None:
+    """create_account raises DuplicateAccountError when account already exists."""
+    from unittest.mock import MagicMock
+
+    from bank.exceptions import DuplicateAccountError
+    from bank.service import BankServiceImpl
+
+    mock_repo = MagicMock()
+    mock_repo.exists.return_value = True
+    svc = BankServiceImpl(mock_repo)
+    with pytest.raises(DuplicateAccountError):
+        svc.create_account("001", "Alice", 100.0)
+
+
+def test_bank_service_impl_create_account_invalid_number() -> None:
+    """create_account raises ValidationError for non-numeric account_number."""
+    from unittest.mock import MagicMock
+
+    from pydantic import ValidationError
 
     from bank.service import BankServiceImpl
 
-    svc = BankServiceImpl(MagicMock())
-    with pytest.raises(NotImplementedError):
-        svc.create_account("ACC001", "Alice", 100.0)
+    mock_repo = MagicMock()
+    mock_repo.exists.return_value = False
+    svc = BankServiceImpl(mock_repo)
+    with pytest.raises(ValidationError):
+        svc.create_account("abc", "Alice", 100.0)
+
+
+def test_bank_service_impl_create_account_negative_balance() -> None:
+    """create_account raises ValidationError for negative initial_balance."""
+    from unittest.mock import MagicMock
+
+    from pydantic import ValidationError
+
+    from bank.service import BankServiceImpl
+
+    mock_repo = MagicMock()
+    mock_repo.exists.return_value = False
+    svc = BankServiceImpl(mock_repo)
+    with pytest.raises(ValidationError):
+        svc.create_account("001", "Alice", -100.0)
 
 
 def test_bank_service_impl_deposit_raises() -> None:

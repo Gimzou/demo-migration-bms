@@ -8,3 +8,13 @@
 4. specs/implementation-artifacts/2-3-withdrawal-command.md
 5. specs/implementation-artifacts/2-4-account-listing-command.md
 ---
+
+## 2-0 — Iteration 1 — Dev
+- Tasks: 3/3
+- Tests written: 0
+- Status: review
+
+### QA verdict: clean ✓
+- Tests: 70 passed / 0 failed
+- ACs: 6/6
+**Story complete after 1 iteration(s).**

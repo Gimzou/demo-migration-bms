@@ -1,7 +1,7 @@
 import typer
-from pydantic import ValidationError  # noqa: F401
+from pydantic import ValidationError
 
-from bank.exceptions import BankError  # noqa: F401
+from bank.exceptions import BankError
 from bank.repository import JsonFileAccountRepository
 from bank.service import BankServiceImpl
 
@@ -15,6 +15,16 @@ def _get_service() -> BankServiceImpl:
 @app.command()
 def create_account(account_number: str, owner: str, initial_balance: float) -> None:
     """Create a new bank account."""
+    try:
+        _get_service().create_account(account_number, owner, initial_balance)
+        typer.echo("Account created successfully.")
+    except ValidationError as exc:
+        msg = exc.errors()[0]["msg"].removeprefix("Value error, ")
+        typer.echo(msg)
+        raise typer.Exit(1)
+    except BankError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(1)
 
 
 @app.command()
