@@ -1,6 +1,6 @@
 # Story 2.1: Create Account Command
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -151,7 +151,13 @@ claude-sonnet-4-6
 
 ### Debug Log References
 
-_No blockers encountered._
+**QA Review — 2026-04-01 (needs-rework)**
+
+- **AC4 FAIL — Negative balance CLI invocation rejected by Typer parser before reaching Pydantic:**
+  Running `uv run bank create-account 001 Ali -100.0` causes Typer (v0.24.1) to interpret `-100.0` as a short option flag (`-1` with value `00.0`), producing the Typer built-in error `"No such option: -1"` and exit code 2. The Pydantic validation for `balance ≥ 0` is never reached. The underlying validation logic is correct (verified by running with `-- -100.0` separator, which produces the expected `"Input should be greater than or equal to 0"` message). Fix required: annotate `initial_balance` as `typer.Argument(...)` with `allow_dash` or restructure the argument to prevent Typer from treating negative numeric literals as flags. One common approach is to use `typer.Argument(parser=float)` or declare the type annotation as `Annotated[float, typer.Argument()]`.
+
+- **AC5 FAIL — `show-accounts` command body is empty (stub), produces no output:**
+  Running `uv run bank show-accounts` exits silently with code 0 and no output. The story's AC5 states "a subsequent `uv run bank show-accounts` lists the created account (persistence verified end-to-end)". The `show_accounts` function in `src/bank/cli.py` has no body. `BankServiceImpl.get_all_accounts()` also raises `NotImplementedError`. Story 2.4 is designated to implement the listing command, but AC5 is written as an acceptance criterion of this story (2.1). Either: (a) implement a minimal `show-accounts` body here using `get_all_accounts()` (if `get_all_accounts` is also in-scope), or (b) coordinate with story ordering and defer AC5 to Story 2.4 via a `bmad-correct-course` correction.
 
 ### Completion Notes List
 
