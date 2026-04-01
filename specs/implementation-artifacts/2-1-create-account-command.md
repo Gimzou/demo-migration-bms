@@ -1,6 +1,6 @@
 # Story 2.1: Create Account Command
 
-Status: review
+Status: done
 
 ## Story
 

@@ -55,7 +55,7 @@ development_status:
   # Epic 2: Core Banking Operations
   epic-2: in-progress
   2-0-bankservice-protocol-bankserviceimpl-scaffold: done
-  2-1-create-account-command: review
+  2-1-create-account-command: done
   2-2-deposit-command: ready-for-dev
   2-3-withdrawal-command: ready-for-dev
   2-4-account-listing-command: ready-for-dev
