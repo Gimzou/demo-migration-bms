@@ -105,15 +105,24 @@ def test_bank_service_impl_withdraw_raises() -> None:
         svc.withdraw("ACC001", 25.0)
 
 
-def test_bank_service_impl_get_all_accounts_raises() -> None:
-    """get_all_accounts raises NotImplementedError (stub until Epic 2)."""
+def test_bank_service_impl_get_all_accounts_delegates_to_repository() -> None:
+    """get_all_accounts delegates directly to repository.find_all()."""
     from unittest.mock import MagicMock
 
+    from bank.model import Account
     from bank.service import BankServiceImpl
 
-    svc = BankServiceImpl(MagicMock())
-    with pytest.raises(NotImplementedError):
-        svc.get_all_accounts()
+    mock_repo = MagicMock()
+    expected = [
+        Account(account_number="001", owner="Alice", balance=500.0),
+        Account(account_number="002", owner="Bob", balance=1000.0),
+    ]
+    mock_repo.find_all.return_value = expected
+    svc = BankServiceImpl(mock_repo)
+    result = svc.get_all_accounts()
+
+    mock_repo.find_all.assert_called_once_with()
+    assert result == expected
 
 
 def test_bank_service_impl_stores_repository() -> None:

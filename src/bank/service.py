@@ -48,4 +48,4 @@ class BankServiceImpl:
         raise NotImplementedError
 
     def get_all_accounts(self) -> list[Account]:
-        raise NotImplementedError
+        return self._repository.find_all()

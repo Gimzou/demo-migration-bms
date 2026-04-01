@@ -1,6 +1,6 @@
 # Story 2.1: Create Account Command
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -167,10 +167,11 @@ claude-sonnet-4-6
 
 ### File List
 
-- `src/bank/service.py` — implemented `create_account()`, updated import block `# noqa` comments
-- `src/bank/cli.py` — implemented `create_account` command body, removed `# noqa: F401` from active imports
-- `tests/test_service.py` — replaced `test_bank_service_impl_create_account_raises` (NotImplementedError) with 4 new tests for the implemented behaviour
+- `src/bank/service.py` — implemented `create_account()`, updated import block `# noqa` comments; implemented `get_all_accounts()` delegating to `repository.find_all()`
+- `src/bank/cli.py` — implemented `create_account` command body, removed `# noqa: F401` from active imports; added `Annotated[float, typer.Argument()]` + `context_settings={"allow_interspersed_args": False}` to fix negative-number flag parsing; added `from typing import Annotated` import; implemented `show_accounts` body
+- `tests/test_service.py` — replaced `test_bank_service_impl_create_account_raises` (NotImplementedError) with 4 new tests for the implemented behaviour; replaced `test_bank_service_impl_get_all_accounts_raises` with `test_bank_service_impl_get_all_accounts_delegates_to_repository`
 
 ### Change Log
 
 - 2026-04-01: Story 2.1 implemented — `BankServiceImpl.create_account()` and `create_account` CLI command body. 4 new service tests added, all 73 tests pass, ruff and mypy --strict clean.
+- 2026-04-01: QA rework iteration — fixed AC4 (negative balance flag-parsing) by adding `Annotated[float, typer.Argument()]` annotation and `context_settings={"allow_interspersed_args": False}` to prevent Typer/Click treating `-100.0` as a flag; fixed AC5 by implementing `BankServiceImpl.get_all_accounts()` and `show_accounts` CLI body (ahead-of-schedule from Story 2.4 to satisfy the AC); replaced `NotImplementedError` test for `get_all_accounts` with delegation test. All 73 tests pass, ruff and mypy --strict clean.

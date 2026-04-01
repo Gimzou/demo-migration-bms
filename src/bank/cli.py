@@ -1,3 +1,5 @@
+from typing import Annotated
+
 import typer
 from pydantic import ValidationError
 
@@ -12,8 +14,12 @@ def _get_service() -> BankServiceImpl:
     return BankServiceImpl(JsonFileAccountRepository())
 
 
-@app.command()
-def create_account(account_number: str, owner: str, initial_balance: float) -> None:
+@app.command(context_settings={"allow_interspersed_args": False})
+def create_account(
+    account_number: str,
+    owner: str,
+    initial_balance: Annotated[float, typer.Argument()],
+) -> None:
     """Create a new bank account."""
     try:
         _get_service().create_account(account_number, owner, initial_balance)
@@ -40,3 +46,29 @@ def withdraw(account_number: str, amount: float) -> None:
 @app.command()
 def show_accounts() -> None:
     """Display all accounts."""
+    accounts = _get_service().get_all_accounts()
+    if not accounts:
+        typer.echo("No accounts found.")
+        return
+
+    headers = ("Account Number", "Owner", "Balance")
+    rows = [
+        (a.account_number, a.owner, f"{a.balance:.2f}")
+        for a in accounts
+    ]
+
+    col_widths = [
+        max(len(headers[i]), max(len(row[i]) for row in rows))
+        for i in range(3)
+    ]
+
+    def fmt_row(cols: tuple[str, str, str]) -> str:
+        return (
+            f"{cols[0]:<{col_widths[0]}}  "
+            f"{cols[1]:<{col_widths[1]}}  "
+            f"{cols[2]:>{col_widths[2]}}"
+        )
+
+    typer.echo(fmt_row(headers))
+    for row in rows:
+        typer.echo(fmt_row(row))
