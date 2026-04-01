@@ -1,6 +1,6 @@
 # Story 2.2: Deposit Command
 
-Status: review
+Status: done
 
 ## Story
 
