@@ -62,3 +62,24 @@ for file in $planning_files; do
     echo "Auto-committed: docs(${workflow:-specs}): complete ${last_step:-step}" >&2
     exit 0
 done
+
+# ── Phase 2: Implementation audit — pipeline trace (complete or partial) ──────
+
+audit_changed=$(git diff --name-only -- "specs/audit/" 2>/dev/null || true)
+audit_untracked=$(git ls-files --others --exclude-standard -- "specs/audit/" 2>/dev/null || true)
+audit_files=$(printf '%s\n%s' "$audit_changed" "$audit_untracked" | sort -u | sed '/^$/d')
+
+for file in $audit_files; do
+    [ -f "$file" ] || continue
+
+    if grep -q '^## Pipeline Summary' "$file"; then
+        msg="audit: complete pipeline trace $(basename "$file" .md)"
+    else
+        msg="audit: partial pipeline trace $(basename "$file" .md)"
+    fi
+
+    git add "$file"
+    git commit -m "$msg"
+    echo "Auto-committed: $msg" >&2
+    exit 0
+done
