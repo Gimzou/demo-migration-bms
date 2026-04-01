@@ -117,6 +117,18 @@ All stories may already be done, or none have been prepared yet.
 Starting now…
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     </output>
+
+    <action>
+      Set `audit_dir` = `specs/audit`
+      Set `trace_file` = `{audit_dir}/pipeline-trace-{raw_target}-{date}.md`
+      Run: mkdir -p specs/audit
+      Write to `{trace_file}`:
+        # Pipeline Trace — {date}
+        **Mode:** {mode}
+        **Target:** {raw_target}
+        **Stories:** {story_list_formatted}
+        ---
+    </action>
   </step>
 
   <step n="2" goal="Process each story through the dev/QA loop">
@@ -191,6 +203,16 @@ Starting now…
 
         <!-- Read story file state after the Dev subagent returns -->
         <action>Read `{current_story}` and extract current Status field → `dev_status`</action>
+
+        <action>
+          Run: git add -A
+          Run: git commit -m "pipeline({story_key}): dev iter {iteration} — {tasks_completed} tasks, {tests_written} tests"
+          Append to `{trace_file}`:
+            ## {story_key} — Iteration {iteration} — Dev
+            - Tasks: {tasks_completed}
+            - Tests written: {tests_written}
+            - Status: review
+        </action>
 
         <check if="dev agent return STATUS == 'blocked' OR dev_status == 'blocked'">
           <output>
@@ -303,6 +325,15 @@ What would you like to do?
             <action>Load FULL `{sprint_status}`</action>
             <action>Update `development_status[{story_key}]` = "done"; update `last_updated` = `{date}`; save</action>
           </check>
+          <action>
+            Run: git add -A
+            Run: git commit -m "pipeline({story_key}): done after {iteration} iter(s)"
+            Append to `{trace_file}`:
+              ### QA verdict: clean ✓
+              - Tests: {tests_result}
+              - ACs: {acs}
+              **Story complete after {iteration} iteration(s).**
+          </action>
           <action>Append to `pipeline_results`: {story: `{story_key}`, result: "done", iterations: `{iteration}`}</action>
           <output>✅ **{story_key} — Clean** after {iteration} iteration(s)
 {qa_agent_return_message}
@@ -310,6 +341,18 @@ What would you like to do?
         </check>
 
         <check if="QA agent return STATUS == 'needs-rework'">
+
+          <action>
+            Run: git add -A
+            Run: git commit -m "pipeline({story_key}): qa iter {iteration} — needs-rework"
+            Append to `{trace_file}`:
+              ### QA verdict: needs-rework
+              - Ruff fixes: {ruff_fixes}
+              - Tests: {tests_result}
+              - ACs satisfied: {acs}
+              - Issues:
+              {qa_issues}
+          </action>
 
           <check if="iteration < max_iterations">
             <action>Set `iteration` = `iteration` + 1</action>
@@ -386,6 +429,17 @@ What would you like to do?
 - Investigate any blocked stories before the next pipeline run
 - If stories remain in the epic, run `/story-pipeline {raw_target}` again
     </output>
+
+    <action>
+      Append to `{trace_file}`:
+        ---
+        ## Pipeline Summary
+        **Stories processed:** {total_stories}
+        **Done:** {done_count}
+        **Blocked:** {blocked_count}
+
+        {pipeline_results_table}
+    </action>
   </step>
 
 </workflow>
