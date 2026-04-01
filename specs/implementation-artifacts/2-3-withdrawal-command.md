@@ -1,6 +1,6 @@
 # Story 2.3: Withdrawal Command
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -18,22 +18,22 @@ so that I can process a customer disbursement.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Implement `BankServiceImpl.withdraw()` in `src/bank/service.py` (AC: 1, 2, 3, 4)
-  - [ ] Validate `amount > 0` → raise `InvalidAmountError`
-  - [ ] Fetch account → raise `AccountNotFoundError` if `None`
-  - [ ] Check `amount <= account.balance` → raise `InsufficientBalanceError` with both amounts in message
-  - [ ] Compute updated account: `account.model_copy(update={"balance": account.balance - amount})`
-  - [ ] Call `self._repository.save(updated)` and return `updated`
-  - [ ] Remove `# noqa: F401` from `InsufficientBalanceError` import (last remaining one)
+- [x] Task 1: Implement `BankServiceImpl.withdraw()` in `src/bank/service.py` (AC: 1, 2, 3, 4)
+  - [x] Validate `amount > 0` → raise `InvalidAmountError`
+  - [x] Fetch account → raise `AccountNotFoundError` if `None`
+  - [x] Check `amount <= account.balance` → raise `InsufficientBalanceError` with both amounts in message
+  - [x] Compute updated account: `account.model_copy(update={"balance": account.balance - amount})`
+  - [x] Call `self._repository.save(updated)` and return `updated`
+  - [x] Remove `# noqa: F401` from `InsufficientBalanceError` import (last remaining one)
 
-- [ ] Task 2: Implement `withdraw` command body in `src/bank/cli.py` (AC: 1, 2, 3, 4)
-  - [ ] Wrap service call in try/except following the established error-handling pattern
-  - [ ] On success: `typer.echo("Withdrawal successful.")`
-  - [ ] On `BankError`: `typer.echo(str(exc))` and `raise typer.Exit(1)`
+- [x] Task 2: Implement `withdraw` command body in `src/bank/cli.py` (AC: 1, 2, 3, 4)
+  - [x] Wrap service call in try/except following the established error-handling pattern
+  - [x] On success: `typer.echo("Withdrawal successful.")`
+  - [x] On `BankError`: `typer.echo(str(exc))` and `raise typer.Exit(1)`
 
-- [ ] Task 3: Run quality gates (AC: 5)
-  - [ ] `ruff check src/` → exit code 0
-  - [ ] `mypy --strict src/` → exit code 0
+- [x] Task 3: Run quality gates (AC: 5)
+  - [x] `ruff check src/` → exit code 0
+  - [x] `mypy --strict src/` → exit code 0
 
 ## Dev Notes
 
@@ -149,6 +149,22 @@ claude-sonnet-4-6
 
 ### Debug Log References
 
+None.
+
 ### Completion Notes List
 
+- Task 1: Implemented `BankServiceImpl.withdraw()` with three guards (amount > 0, account exists, amount <= balance) and `model_copy` for immutable balance update. Removed the last `# noqa: F401` from the `InsufficientBalanceError` import. Fixed line-length ruff violation by splitting the `InvalidAmountError` message across two string literals (matching the deposit pattern already used in the codebase).
+- Task 2: Implemented `withdraw` CLI command body in `cli.py` following the established try/except pattern from deposit. Prints "Withdrawal successful." on success, echoes the exception message and exits with code 1 on any `BankError`.
+- Task 3: `ruff check src/` and `mypy --strict src/` both exit 0. Full test suite: 88 passed, 0 failed.
+- Tests written: 7 service-level tests in `tests/test_service.py` (replaced the `NotImplementedError` stub test with 7 behaviour-driven tests) and 5 CLI tests in `tests/test_withdraw.py`.
+
 ### File List
+
+- `src/bank/service.py` — implemented `withdraw()`, removed `# noqa: F401` from `InsufficientBalanceError` import
+- `src/bank/cli.py` — implemented `withdraw` command body
+- `tests/test_service.py` — replaced `NotImplementedError` stub test with 7 withdraw behaviour tests
+- `tests/test_withdraw.py` — new file: 5 CLI integration tests for the withdraw command
+
+## Change Log
+
+- 2026-04-01: Story 2.3 implemented by claude-sonnet-4-6 (Amelia). Implemented `BankServiceImpl.withdraw()` with three-guard pattern (amount, account, balance) and `model_copy` for immutable update. Implemented `withdraw` CLI command with try/except error-handling. Removed last `# noqa: F401` annotation. All 88 tests pass; ruff and mypy --strict exit 0.

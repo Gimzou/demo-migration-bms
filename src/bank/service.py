@@ -3,7 +3,7 @@ from typing import Protocol
 from bank.exceptions import (
     AccountNotFoundError,
     DuplicateAccountError,
-    InsufficientBalanceError,  # noqa: F401  (used in Story 2.3)
+    InsufficientBalanceError,
     InvalidAmountError,
 )
 from bank.model import Account
@@ -57,7 +57,24 @@ class BankServiceImpl:
         return updated
 
     def withdraw(self, account_number: str, amount: float) -> Account:
-        raise NotImplementedError
+        if amount <= 0:
+            raise InvalidAmountError(
+                "Invalid amount: withdrawal amount must be greater than 0,"
+                f" got {amount:.2f}."
+            )
+        account = self._repository.find_by_id(account_number)
+        if account is None:
+            raise AccountNotFoundError(
+                f"Account not found: no account with number {account_number}."
+            )
+        if amount > account.balance:
+            raise InsufficientBalanceError(
+                f"Insufficient balance: cannot withdraw {amount:.2f} from account "
+                f"{account_number} (current balance: {account.balance:.2f})."
+            )
+        updated = account.model_copy(update={"balance": account.balance - amount})
+        self._repository.save(updated)
+        return updated
 
     def get_all_accounts(self) -> list[Account]:
         return self._repository.find_all()

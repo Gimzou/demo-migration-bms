@@ -41,3 +41,13 @@
 - Tests: 73 passed / 0 failed
 - ACs: 5/5
 **Story complete after 2 iteration(s).**
+
+## 2-2 — Iteration 1 — Dev
+- Tasks: 3/3
+- Tests written: 5
+- Status: review
+
+### QA verdict: clean ✓
+- Tests: 77 passed / 0 failed
+- ACs: 4/4
+**Story complete after 1 iteration(s).**

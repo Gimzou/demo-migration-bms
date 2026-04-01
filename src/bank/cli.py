@@ -47,6 +47,12 @@ def deposit(account_number: str, amount: float) -> None:
 @app.command()
 def withdraw(account_number: str, amount: float) -> None:
     """Withdraw funds from an account."""
+    try:
+        _get_service().withdraw(account_number, amount)
+        typer.echo("Withdrawal successful.")
+    except BankError as exc:
+        typer.echo(str(exc))
+        raise typer.Exit(1)
 
 
 @app.command()
