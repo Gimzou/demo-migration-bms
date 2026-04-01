@@ -61,3 +61,27 @@
 - Tests: 88 passed / 0 failed
 - ACs: 5/5
 **Story complete after 1 iteration(s).**
+
+## 2-4 — Iteration 1 — Dev
+- Tasks: 3/3
+- Tests written: 0
+- Status: review
+
+### QA verdict: clean ✓
+- Tests: 88 passed / 0 failed
+- ACs: 4/4
+**Story complete after 1 iteration(s).**
+
+---
+## Pipeline Summary
+**Stories processed:** 5
+**Done:** 5
+**Blocked:** 0
+
+| Story | Result | Iterations |
+|-------|--------|------------|
+| 2-0   | done   | 1          |
+| 2-1   | done   | 2          |
+| 2-2   | done   | 1          |
+| 2-3   | done   | 1          |
+| 2-4   | done   | 1          |
