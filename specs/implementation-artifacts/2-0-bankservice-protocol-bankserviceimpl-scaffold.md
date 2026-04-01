@@ -1,6 +1,6 @@
 # Story 2.0: BankService Protocol & BankServiceImpl Scaffold
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -21,19 +21,19 @@ so that Banking Operations stories (2.1–2.4) have a clearly defined place to a
 
 > **Context: This story's implementation is already complete.** Story 1.5 delivered the full scaffold (see Dev Notes). The dev agent's job is verification only: confirm ACs pass against existing code, run quality gates.
 
-- [ ] Task 1: Verify `src/bank/service.py` against ACs 1–4
-  - [ ] `BankService` Protocol defines all four method signatures with correct types
-  - [ ] `BankServiceImpl` does **not** inherit from `BankService`
-  - [ ] All four methods raise `NotImplementedError`
-  - [ ] `__init__(self, repository: AccountRepository) -> None` is present
+- [x] Task 1: Verify `src/bank/service.py` against ACs 1–4
+  - [x] `BankService` Protocol defines all four method signatures with correct types
+  - [x] `BankServiceImpl` does **not** inherit from `BankService`
+  - [x] All four methods raise `NotImplementedError`
+  - [x] `__init__(self, repository: AccountRepository) -> None` is present
 
-- [ ] Task 2: Verify `src/bank/cli.py` against AC 5
-  - [ ] `_get_service()` returns `BankServiceImpl(JsonFileAccountRepository())`
-  - [ ] The function is the composition root (only place concrete implementations are wired)
+- [x] Task 2: Verify `src/bank/cli.py` against AC 5
+  - [x] `_get_service()` returns `BankServiceImpl(JsonFileAccountRepository())`
+  - [x] The function is the composition root (only place concrete implementations are wired)
 
-- [ ] Task 3: Run quality gates (AC 6)
-  - [ ] `ruff check src/` → exit code 0
-  - [ ] `mypy --strict src/` → exit code 0
+- [x] Task 3: Run quality gates (AC 6)
+  - [x] `ruff check src/` → exit code 0
+  - [x] `mypy --strict src/` → exit code 0
 
 ## Dev Notes
 
@@ -183,6 +183,21 @@ claude-sonnet-4-6
 
 ### Debug Log References
 
+_No issues encountered. Implementation was already complete from Story 1.5._
+
 ### Completion Notes List
 
+- Verified `src/bank/service.py`: `BankService` Protocol has all four method signatures with correct return types and parameter names. `BankServiceImpl` does not inherit from `BankService` (structural duck typing). All four methods raise `NotImplementedError`. `__init__` accepts `AccountRepository` and stores it as `self._repository`.
+- Verified `src/bank/cli.py`: `_get_service()` correctly wires `BankServiceImpl(JsonFileAccountRepository())` and is the sole composition root.
+- Quality gates: `ruff check src/` → exit 0 (All checks passed!), `mypy --strict src/` → exit 0 (no issues in 6 source files), `pytest` → 70 passed, 100% coverage.
+
 ### File List
+
+- src/bank/service.py (verified, no changes)
+- src/bank/cli.py (verified, no changes)
+
+## Change Log
+
+| Date | Change |
+|------|--------|
+| 2026-04-01 | Verification-only story: confirmed all 6 ACs satisfied by Story 1.5 deliverable; quality gates (ruff, mypy --strict, pytest 70/70) all pass; story status set to review |
