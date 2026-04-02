@@ -67,7 +67,7 @@ The model is immutable — updates go through `model_copy(update={...})` rather 
 │   ├── prd.md
 │   ├── architecture.md
 │   ├── epics.md
-│   ├── audit/                       # Pipeline execution traces, one file per epic
+│   ├── audit/                       # Pipeline execution traces, one file per epic or individual story
 │   └── implementation-artifacts/
 │       ├── sprint-status.yaml
 │       └── *.md                     # Individual story files
