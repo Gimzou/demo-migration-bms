@@ -27,3 +27,8 @@
 - Tests: 80 passed / 0 failed
 - ACs: 5/5
 **Story complete after 1 iteration(s).**
+
+## 3-3-cli-integration-tests-error-message-assertions — Iteration 1 — Dev
+- Tasks: 3/3
+- Tests written: 10
+- Status: review

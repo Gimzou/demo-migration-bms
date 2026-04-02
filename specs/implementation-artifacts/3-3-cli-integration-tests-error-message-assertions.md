@@ -1,6 +1,6 @@
 d# Story 3.3: CLI Integration Tests & Error Message Assertions
 
-Status: review
+Status: done
 
 ## Story
 
