@@ -7,3 +7,8 @@
 3. specs/implementation-artifacts/3-3-cli-integration-tests-error-message-assertions.md
 4. specs/implementation-artifacts/3-4-nfr-gates-linting-typing-coverage.md
 ---
+
+## 3-1-test-foundation-account-model-tests — Iteration 1 — Dev
+- Tasks: 3/3
+- Tests written: 3
+- Status: review
