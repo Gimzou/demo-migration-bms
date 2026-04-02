@@ -61,9 +61,9 @@ development_status:
   epic-2-retrospective: optional
 
   # Epic 3: Migration Quality Assurance
-  epic-3: in-progress
-  3-1-test-foundation-account-model-tests: review
-  3-2-service-repository-tests: review
-  3-3-cli-integration-tests-error-message-assertions: review
+  epic-3: done
+  3-1-test-foundation-account-model-tests: done
+  3-2-service-repository-tests: done
+  3-3-cli-integration-tests-error-message-assertions: done
   3-4-nfr-gates-linting-typing-coverage: done
   epic-3-retrospective: optional
