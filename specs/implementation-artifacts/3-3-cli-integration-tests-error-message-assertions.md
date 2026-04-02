@@ -1,6 +1,6 @@
 d# Story 3.3: CLI Integration Tests & Error Message Assertions
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -23,25 +23,25 @@ so that the user-facing UX is regression-protected.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `tests/test_cli.py` with success-path tests (AC: 1, 2, 5)
-  - [ ] `test_create_account_success` — exit code 0, output contains "Account created successfully."
-  - [ ] `test_deposit_success` — exit code 0, output contains "Deposit successful."
-  - [ ] `test_withdraw_success` — exit code 0, output contains "Withdrawal successful."
-  - [ ] `test_show_accounts_with_data` — exit code 0, output contains Account Number/Owner/Balance headers and correct balance formatted to 2 decimal places
-  - [ ] `test_show_accounts_empty_state` — exit code 0, output is "No accounts found."
-  - [ ] Use `monkeypatch.chdir(tmp_path)` in every test for file isolation (see Dev Notes)
+- [x] Task 1: Create `tests/test_cli.py` with success-path tests (AC: 1, 2, 5)
+  - [x] `test_create_account_success` — exit code 0, output contains "Account created successfully."
+  - [x] `test_deposit_success` — exit code 0, output contains "Deposit successful."
+  - [x] `test_withdraw_success` — exit code 0, output contains "Withdrawal successful."
+  - [x] `test_show_accounts_with_data` — exit code 0, output contains Account Number/Owner/Balance headers and correct balance formatted to 2 decimal places
+  - [x] `test_show_accounts_empty_state` — exit code 0, output is "No accounts found."
+  - [x] Use `monkeypatch.chdir(tmp_path)` in every test for file isolation (see Dev Notes)
 
-- [ ] Task 2: Add error-path tests with content assertions (AC: 3, 4)
-  - [ ] `test_create_account_duplicate_error` — non-zero exit, output contains duplicate indication, NO raw traceback
-  - [ ] `test_create_account_non_numeric_account_number` — non-zero exit, output contains "numeric", NO "ValidationError" or traceback
-  - [ ] `test_withdraw_overdraft_error` — non-zero exit, output contains both the attempted amount and the current balance
-  - [ ] `test_deposit_account_not_found` — non-zero exit, output contains account-not-found indication
-  - [ ] `test_withdraw_account_not_found` — non-zero exit, output contains account-not-found indication
+- [x] Task 2: Add error-path tests with content assertions (AC: 3, 4)
+  - [x] `test_create_account_duplicate_error` — non-zero exit, output contains duplicate indication, NO raw traceback
+  - [x] `test_create_account_non_numeric_account_number` — non-zero exit, output contains "numeric", NO "ValidationError" or traceback
+  - [x] `test_withdraw_overdraft_error` — non-zero exit, output contains both the attempted amount and the current balance
+  - [x] `test_deposit_account_not_found` — non-zero exit, output contains account-not-found indication
+  - [x] `test_withdraw_account_not_found` — non-zero exit, output contains account-not-found indication
 
-- [ ] Task 3: Run quality gates (AC: 5, 6)
-  - [ ] `uv run pytest` → all tests pass; check coverage for `bank/cli.py`
-  - [ ] `ruff check src/` → exit code 0
-  - [ ] `mypy --strict src/` → exit code 0
+- [x] Task 3: Run quality gates (AC: 5, 6)
+  - [x] `uv run pytest` → all tests pass; check coverage for `bank/cli.py`
+  - [x] `ruff check src/` → exit code 0
+  - [x] `mypy --strict src/` → exit code 0
 
 ## Dev Notes
 
@@ -217,6 +217,21 @@ claude-sonnet-4-6
 
 ### Debug Log References
 
+_None — implementation proceeded without blockers._
+
 ### Completion Notes List
 
+- Created `tests/test_cli.py` with 10 integration tests using `typer.testing.CliRunner`.
+- All 5 success-path tests pass (create-account, deposit, withdraw, show-accounts with data, show-accounts empty state).
+- All 5 error-path tests pass asserting on message content: duplicate account, non-numeric account number, overdraft (both amounts), deposit/withdraw account-not-found.
+- No test asserts on raw `ValidationError` or `Traceback` text — all assertions target reformatted user-facing strings.
+- `bank/cli.py` coverage: 100%. Full suite: 90/90 tests, 100% total coverage.
+- `ruff check src/` → 0 violations. `mypy --strict src/` → 0 issues.
+
 ### File List
+
+- `tests/test_cli.py` — CREATED: 10 CLI integration tests (success paths + error-message assertions)
+
+## Change Log
+
+- 2026-04-02: Story implemented by claude-sonnet-4-6 (Amelia). Created `tests/test_cli.py` with 10 integration tests covering all success and error paths. All quality gates pass (pytest 90/90, ruff, mypy --strict). Status set to "review".
