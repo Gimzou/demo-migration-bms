@@ -1,6 +1,6 @@
 # Story 3.2: Service & Repository Tests
 
-Status: review
+Status: done
 
 ## Story
 
@@ -252,4 +252,4 @@ _No blockers encountered._
 
 ## Status
 
-review
+done
