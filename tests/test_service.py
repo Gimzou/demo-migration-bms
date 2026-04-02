@@ -1,305 +1,173 @@
-"""Tests for BankServiceImpl stub — Story 1.5."""
+"""Real service tests for BankServiceImpl — Story 3.2.
+
+All tests inject a real JsonFileAccountRepository backed by the `json_file` fixture
+from conftest.py, providing authentic Pydantic round-trip + persistence coverage
+without mocking.
+"""
+
+from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
+
+from bank.exceptions import (
+    AccountNotFoundError,
+    DuplicateAccountError,
+    InsufficientBalanceError,
+    InvalidAmountError,
+)
+from bank.model import Account
+from bank.repository import JsonFileAccountRepository
+from bank.service import BankServiceImpl
 
 
-def test_bank_service_impl_importable() -> None:
-    """BankServiceImpl must be importable from bank.service."""
-    from bank.service import BankServiceImpl  # noqa: F401
+@pytest.fixture
+def svc(json_file: Path) -> BankServiceImpl:
+    return BankServiceImpl(JsonFileAccountRepository(json_file))
 
 
-def test_bank_service_impl_accepts_repository() -> None:
-    """BankServiceImpl must accept an AccountRepository in its constructor."""
-    from unittest.mock import MagicMock
-
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    svc = BankServiceImpl(mock_repo)
-    assert svc is not None
+# ---------------------------------------------------------------------------
+# create_account
+# ---------------------------------------------------------------------------
 
 
-def test_bank_service_impl_create_account_persists() -> None:
-    """create_account saves a valid Account via the repository and returns it."""
-    from unittest.mock import MagicMock
+def test_create_account_success(svc: BankServiceImpl, sample_account: Account) -> None:
+    """create_account returns Account and persists it.
 
-    from bank.model import Account
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    mock_repo.exists.return_value = False
-    svc = BankServiceImpl(mock_repo)
-    account = svc.create_account("001", "Alice", 500.0)
-
-    mock_repo.exists.assert_called_once_with("001")
-    mock_repo.save.assert_called_once_with(account)
-    assert isinstance(account, Account)
-    assert account.account_number == "001"
-    assert account.owner == "Alice"
-    assert account.balance == 500.0
+    # Java scenario equivalent
+    """
+    result = svc.create_account(
+        sample_account.account_number, sample_account.owner, sample_account.balance
+    )
+    assert isinstance(result, Account)
+    assert result.account_number == "001"
+    assert result.owner == "Ali"
+    assert result.balance == 500.0
+    # verify persistence
+    accounts = svc.get_all_accounts()
+    assert len(accounts) == 1
+    assert accounts[0] == result
 
 
-def test_bank_service_impl_create_account_duplicate_raises() -> None:
+def test_create_account_duplicate_raises(svc: BankServiceImpl, sample_account: Account) -> None:
     """create_account raises DuplicateAccountError when account already exists."""
-    from unittest.mock import MagicMock
-
-    from bank.exceptions import DuplicateAccountError
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    mock_repo.exists.return_value = True
-    svc = BankServiceImpl(mock_repo)
-    with pytest.raises(DuplicateAccountError):
-        svc.create_account("001", "Alice", 100.0)
+    svc.create_account(sample_account.account_number, sample_account.owner, sample_account.balance)
+    with pytest.raises(DuplicateAccountError) as exc_info:
+        svc.create_account(sample_account.account_number, sample_account.owner, sample_account.balance)
+    assert "001" in exc_info.value.message
 
 
-def test_bank_service_impl_create_account_invalid_number() -> None:
-    """create_account raises ValidationError for non-numeric account_number."""
-    from unittest.mock import MagicMock
-
-    from pydantic import ValidationError
-
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    mock_repo.exists.return_value = False
-    svc = BankServiceImpl(mock_repo)
+def test_create_account_invalid_account_number(svc: BankServiceImpl) -> None:
+    """Non-numeric account_number propagates Pydantic ValidationError (not BankError)."""
     with pytest.raises(ValidationError):
-        svc.create_account("abc", "Alice", 100.0)
+        svc.create_account("abc", "Ali", 500.0)
 
 
-def test_bank_service_impl_create_account_negative_balance() -> None:
-    """create_account raises ValidationError for negative initial_balance."""
-    from unittest.mock import MagicMock
-
-    from pydantic import ValidationError
-
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    mock_repo.exists.return_value = False
-    svc = BankServiceImpl(mock_repo)
-    with pytest.raises(ValidationError):
-        svc.create_account("001", "Alice", -100.0)
+# ---------------------------------------------------------------------------
+# deposit
+# ---------------------------------------------------------------------------
 
 
-def test_bank_service_impl_deposit_success() -> None:
-    """deposit updates balance and persists updated account."""
-    from unittest.mock import MagicMock
+def test_deposit_success(svc: BankServiceImpl, sample_account: Account) -> None:
+    """deposit increases balance and returns updated Account.
 
-    from bank.model import Account
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    existing = Account(account_number="001", owner="Alice", balance=500.0)
-    mock_repo.find_by_id.return_value = existing
-    svc = BankServiceImpl(mock_repo)
+    # Java scenario equivalent
+    """
+    svc.create_account(sample_account.account_number, sample_account.owner, sample_account.balance)
     result = svc.deposit("001", 200.0)
-
-    mock_repo.find_by_id.assert_called_once_with("001")
-    mock_repo.save.assert_called_once()
-    assert result.balance == 700.0
-    assert result.account_number == "001"
-
-
-def test_bank_service_impl_deposit_account_not_found() -> None:
-    """deposit raises AccountNotFoundError when account does not exist."""
-    from unittest.mock import MagicMock
-
-    from bank.exceptions import AccountNotFoundError
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    mock_repo.find_by_id.return_value = None
-    svc = BankServiceImpl(mock_repo)
-    with pytest.raises(AccountNotFoundError):
-        svc.deposit("999", 100.0)
+    assert isinstance(result, Account)
+    assert result.balance == 700.0  # 500 + 200
+    # verify persistence
+    accounts = svc.get_all_accounts()
+    assert accounts[0].balance == 700.0
 
 
-def test_bank_service_impl_deposit_zero_amount() -> None:
+def test_deposit_invalid_amount_zero(svc: BankServiceImpl, sample_account: Account) -> None:
     """deposit raises InvalidAmountError for zero amount."""
-    from unittest.mock import MagicMock
-
-    from bank.exceptions import InvalidAmountError
-    from bank.service import BankServiceImpl
-
-    svc = BankServiceImpl(MagicMock())
-    with pytest.raises(InvalidAmountError):
-        svc.deposit("001", 0.0)
-
-
-def test_bank_service_impl_deposit_negative_amount() -> None:
-    """deposit raises InvalidAmountError for negative amount."""
-    from unittest.mock import MagicMock
-
-    from bank.exceptions import InvalidAmountError
-    from bank.service import BankServiceImpl
-
-    svc = BankServiceImpl(MagicMock())
-    with pytest.raises(InvalidAmountError):
-        svc.deposit("001", -50.0)
-
-
-def test_bank_service_impl_deposit_balance_not_modified_on_invalid_amount() -> None:
-    """deposit does not call save when amount is invalid."""
-    from unittest.mock import MagicMock
-
-    from bank.exceptions import InvalidAmountError
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    svc = BankServiceImpl(mock_repo)
-    with pytest.raises(InvalidAmountError):
-        svc.deposit("001", 0.0)
-    mock_repo.save.assert_not_called()
-
-
-def test_bank_service_impl_withdraw_success() -> None:
-    """withdraw deducts amount from balance, saves updated account, and returns it."""
-    from unittest.mock import MagicMock
-
-    from bank.model import Account
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    existing = Account(account_number="001", owner="Alice", balance=500.0)
-    mock_repo.find_by_id.return_value = existing
-    svc = BankServiceImpl(mock_repo)
-    result = svc.withdraw("001", 200.0)
-
-    mock_repo.find_by_id.assert_called_once_with("001")
-    mock_repo.save.assert_called_once()
-    assert result.balance == 300.0
-    assert result.account_number == "001"
-
-
-def test_bank_service_impl_withdraw_zero_amount_raises() -> None:
-    """withdraw raises InvalidAmountError for zero amount without touching repo."""
-    from unittest.mock import MagicMock
-
-    from bank.exceptions import InvalidAmountError
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    svc = BankServiceImpl(mock_repo)
+    svc.create_account(sample_account.account_number, sample_account.owner, sample_account.balance)
     with pytest.raises(InvalidAmountError) as exc_info:
-        svc.withdraw("001", 0.0)
-    assert "0.00" in str(exc_info.value)
-    mock_repo.find_by_id.assert_not_called()
-    mock_repo.save.assert_not_called()
+        svc.deposit("001", 0.0)
+    assert "0.00" in exc_info.value.message
+    # balance unchanged
+    accounts = svc.get_all_accounts()
+    assert accounts[0].balance == 500.0
 
 
-def test_bank_service_impl_withdraw_negative_amount_raises() -> None:
-    """withdraw raises InvalidAmountError for negative amount without touching repo."""
-    from unittest.mock import MagicMock
-
-    from bank.exceptions import InvalidAmountError
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    svc = BankServiceImpl(mock_repo)
-    with pytest.raises(InvalidAmountError):
-        svc.withdraw("001", -50.0)
-    mock_repo.save.assert_not_called()
+def test_deposit_invalid_amount_negative(svc: BankServiceImpl, sample_account: Account) -> None:
+    """deposit raises InvalidAmountError for negative amount."""
+    svc.create_account(sample_account.account_number, sample_account.owner, sample_account.balance)
+    with pytest.raises(InvalidAmountError) as exc_info:
+        svc.deposit("001", -50.0)
+    assert "-50.00" in exc_info.value.message
+    # balance unchanged
+    accounts = svc.get_all_accounts()
+    assert accounts[0].balance == 500.0
 
 
-def test_bank_service_impl_withdraw_account_not_found_raises() -> None:
-    """withdraw raises AccountNotFoundError when account does not exist."""
-    from unittest.mock import MagicMock
-
-    from bank.exceptions import AccountNotFoundError
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    mock_repo.find_by_id.return_value = None
-    svc = BankServiceImpl(mock_repo)
+def test_deposit_account_not_found(svc: BankServiceImpl) -> None:
+    """deposit raises AccountNotFoundError for an unknown account."""
     with pytest.raises(AccountNotFoundError) as exc_info:
-        svc.withdraw("999", 100.0)
-    assert "999" in str(exc_info.value)
-    mock_repo.save.assert_not_called()
+        svc.deposit("999", 100.0)
+    assert "999" in exc_info.value.message
 
 
-def test_bank_service_impl_withdraw_insufficient_balance_raises() -> None:
-    """withdraw raises InsufficientBalanceError with both amounts in message."""
-    from unittest.mock import MagicMock
+# ---------------------------------------------------------------------------
+# withdraw
+# ---------------------------------------------------------------------------
 
-    from bank.exceptions import InsufficientBalanceError
-    from bank.model import Account
-    from bank.service import BankServiceImpl
 
-    mock_repo = MagicMock()
-    existing = Account(account_number="001", owner="Alice", balance=300.0)
-    mock_repo.find_by_id.return_value = existing
-    svc = BankServiceImpl(mock_repo)
+def test_withdraw_success(svc: BankServiceImpl, sample_account: Account) -> None:
+    """withdraw decreases balance and returns updated Account.
+
+    # Java scenario equivalent
+    """
+    svc.create_account(sample_account.account_number, sample_account.owner, sample_account.balance)
+    result = svc.withdraw("001", 200.0)
+    assert isinstance(result, Account)
+    assert result.balance == 300.0  # 500 - 200
+    # verify persistence
+    accounts = svc.get_all_accounts()
+    assert accounts[0].balance == 300.0
+
+
+def test_withdraw_overdraft_raises(svc: BankServiceImpl, sample_account: Account) -> None:
+    """withdraw raises InsufficientBalanceError with both amounts in message.
+
+    # Java scenario equivalent
+    """
+    svc.create_account(sample_account.account_number, sample_account.owner, sample_account.balance)
     with pytest.raises(InsufficientBalanceError) as exc_info:
         svc.withdraw("001", 800.0)
-    error_msg = str(exc_info.value)
-    assert "800.00" in error_msg
-    assert "300.00" in error_msg
-    mock_repo.save.assert_not_called()
+    assert "800.00" in exc_info.value.message
+    assert "500.00" in exc_info.value.message  # current balance
+    # balance must be unchanged
+    accounts = svc.get_all_accounts()
+    assert accounts[0].balance == 500.0
 
 
-def test_bank_service_impl_withdraw_does_not_mutate_on_overdraft() -> None:
-    """withdraw does not call save when overdraft guard fires."""
-    from unittest.mock import MagicMock
-
-    from bank.model import Account
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    existing = Account(account_number="001", owner="Alice", balance=300.0)
-    mock_repo.find_by_id.return_value = existing
-    svc = BankServiceImpl(mock_repo)
-    try:
-        svc.withdraw("001", 800.0)
-    except Exception:
-        pass
-    mock_repo.save.assert_not_called()
+def test_withdraw_invalid_amount_zero(svc: BankServiceImpl, sample_account: Account) -> None:
+    """withdraw raises InvalidAmountError for zero amount."""
+    svc.create_account(sample_account.account_number, sample_account.owner, sample_account.balance)
+    with pytest.raises(InvalidAmountError) as exc_info:
+        svc.withdraw("001", 0.0)
+    assert "0.00" in exc_info.value.message
+    # balance unchanged
+    accounts = svc.get_all_accounts()
+    assert accounts[0].balance == 500.0
 
 
-def test_bank_service_impl_withdraw_exact_balance_succeeds() -> None:
-    """withdraw with amount equal to balance succeeds (balance reaches 0)."""
-    from unittest.mock import MagicMock
-
-    from bank.model import Account
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    existing = Account(account_number="001", owner="Alice", balance=300.0)
-    mock_repo.find_by_id.return_value = existing
-    svc = BankServiceImpl(mock_repo)
-    result = svc.withdraw("001", 300.0)
-
-    assert result.balance == 0.0
-    mock_repo.save.assert_called_once()
+def test_withdraw_invalid_amount_negative(svc: BankServiceImpl, sample_account: Account) -> None:
+    """withdraw raises InvalidAmountError for negative amount."""
+    svc.create_account(sample_account.account_number, sample_account.owner, sample_account.balance)
+    with pytest.raises(InvalidAmountError):
+        svc.withdraw("001", -50.0)
+    # balance unchanged
+    accounts = svc.get_all_accounts()
+    assert accounts[0].balance == 500.0
 
 
-def test_bank_service_impl_get_all_accounts_delegates_to_repository() -> None:
-    """get_all_accounts delegates directly to repository.find_all()."""
-    from unittest.mock import MagicMock
-
-    from bank.model import Account
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    expected = [
-        Account(account_number="001", owner="Alice", balance=500.0),
-        Account(account_number="002", owner="Bob", balance=1000.0),
-    ]
-    mock_repo.find_all.return_value = expected
-    svc = BankServiceImpl(mock_repo)
-    result = svc.get_all_accounts()
-
-    mock_repo.find_all.assert_called_once_with()
-    assert result == expected
-
-
-def test_bank_service_impl_stores_repository() -> None:
-    """BankServiceImpl stores the injected repository as _repository."""
-    from unittest.mock import MagicMock
-
-    from bank.service import BankServiceImpl
-
-    mock_repo = MagicMock()
-    svc = BankServiceImpl(mock_repo)
-    assert svc._repository is mock_repo
+def test_withdraw_account_not_found(svc: BankServiceImpl) -> None:
+    """withdraw raises AccountNotFoundError for an unknown account."""
+    with pytest.raises(AccountNotFoundError) as exc_info:
+        svc.withdraw("999", 100.0)
+    assert "999" in exc_info.value.message

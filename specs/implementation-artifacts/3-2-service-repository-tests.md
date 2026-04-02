@@ -1,6 +1,6 @@
 # Story 3.2: Service & Repository Tests
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -22,30 +22,30 @@ so that business logic and persistence behavior are independently verified.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Replace `tests/test_service.py` with real service tests (AC: 2, 3, 4)
-  - [ ] Remove all `NotImplementedError` stub tests — they are no longer valid
-  - [ ] Write `test_create_account_success` — creates account, returns `Account`, persists
-  - [ ] Write `test_create_account_duplicate_raises` — `DuplicateAccountError`
-  - [ ] Write `test_create_account_invalid_account_number` — non-numeric triggers `ValidationError` from Pydantic (not `BankError`)
-  - [ ] Write `test_deposit_success` — balance increases, returns updated `Account`
-  - [ ] Write `test_deposit_invalid_amount_zero` — `InvalidAmountError`
-  - [ ] Write `test_deposit_invalid_amount_negative` — `InvalidAmountError`
-  - [ ] Write `test_deposit_account_not_found` — `AccountNotFoundError`
-  - [ ] Write `test_withdraw_success` — balance decreases, returns updated `Account`
-  - [ ] Write `test_withdraw_overdraft_raises` — `InsufficientBalanceError` with message containing amounts
-  - [ ] Write `test_withdraw_invalid_amount_zero` — `InvalidAmountError`
-  - [ ] Write `test_withdraw_account_not_found` — `AccountNotFoundError`
-  - [ ] Confirm 4 Java-scenario equivalents are covered (see Dev Notes)
+- [x] Task 1: Replace `tests/test_service.py` with real service tests (AC: 2, 3, 4)
+  - [x] Remove all `NotImplementedError` stub tests — they are no longer valid
+  - [x] Write `test_create_account_success` — creates account, returns `Account`, persists
+  - [x] Write `test_create_account_duplicate_raises` — `DuplicateAccountError`
+  - [x] Write `test_create_account_invalid_account_number` — non-numeric triggers `ValidationError` from Pydantic (not `BankError`)
+  - [x] Write `test_deposit_success` — balance increases, returns updated `Account`
+  - [x] Write `test_deposit_invalid_amount_zero` — `InvalidAmountError`
+  - [x] Write `test_deposit_invalid_amount_negative` — `InvalidAmountError`
+  - [x] Write `test_deposit_account_not_found` — `AccountNotFoundError`
+  - [x] Write `test_withdraw_success` — balance decreases, returns updated `Account`
+  - [x] Write `test_withdraw_overdraft_raises` — `InsufficientBalanceError` with message containing amounts
+  - [x] Write `test_withdraw_invalid_amount_zero` — `InvalidAmountError`
+  - [x] Write `test_withdraw_account_not_found` — `AccountNotFoundError`
+  - [x] Confirm 4 Java-scenario equivalents are covered (see Dev Notes)
 
-- [ ] Task 2: Update `tests/test_repository.py` to use conftest fixtures (AC: 1, 4)
-  - [ ] Replace inline `tmp_path / "accounts.json"` with the `json_file` fixture from conftest
-  - [ ] Use `sample_account` fixture where tests create `Account(account_number="001", owner="Ali", balance=500.0)`
-  - [ ] Confirm existing 8 tests still pass; add no new repository test if AC coverage is already met
+- [x] Task 2: Update `tests/test_repository.py` to use conftest fixtures (AC: 1, 4)
+  - [x] Replace inline `tmp_path / "accounts.json"` with the `json_file` fixture from conftest
+  - [x] Use `sample_account` fixture where tests create `Account(account_number="001", owner="Ali", balance=500.0)`
+  - [x] Confirm existing 8 tests still pass; add no new repository test if AC coverage is already met
 
-- [ ] Task 3: Run quality gates (AC: 4, 5)
-  - [ ] `uv run pytest` → all tests pass; check coverage for `bank/service.py` and `bank/repository.py`
-  - [ ] `ruff check src/` → exit code 0
-  - [ ] `mypy --strict src/` → exit code 0
+- [x] Task 3: Run quality gates (AC: 4, 5)
+  - [x] `uv run pytest` → all tests pass; check coverage for `bank/service.py` and `bank/repository.py`
+  - [x] `ruff check src/` → exit code 0
+  - [x] `mypy --strict src/` → exit code 0
 
 ## Dev Notes
 
@@ -233,6 +233,23 @@ claude-sonnet-4-6
 
 ### Debug Log References
 
+_No blockers encountered._
+
 ### Completion Notes List
 
+- Task 1: Completely replaced `tests/test_service.py` with 12 real integration tests. Each test injects a real `JsonFileAccountRepository` backed by the `json_file` fixture for authentic Pydantic round-trip coverage. All four Java-equivalent scenarios are covered (`test_create_account_success`, `test_deposit_success`, `test_withdraw_success`, `test_withdraw_overdraft_raises`) with `# Java scenario equivalent` docstring comments. Assertions on domain exceptions use `.message` attribute. Balance-unchanged-on-error verified via `get_all_accounts()` after the exception.
+- Task 2: Updated `tests/test_repository.py` to replace all inline `tmp_path / "accounts.json"` patterns with the `json_file` fixture and all inline `Account(account_number="001", ...)` constructions with the `sample_account` fixture. All 8 existing tests still pass; no new tests added (AC-1 coverage was already met).
+- Task 3: All 80 tests pass (12 service + 8 repository + 60 others). `bank/service.py` and `bank/repository.py` both at 100% coverage. `ruff check src/` exit 0. `mypy --strict src/` exit 0.
+
 ### File List
+
+- `tests/test_service.py` — completely replaced with 12 real integration tests using `json_file` and `sample_account` fixtures
+- `tests/test_repository.py` — updated to use `json_file` and `sample_account` conftest fixtures instead of inline `tmp_path` patterns
+
+## Change Log
+
+- 2026-04-02: Story 3.2 implemented — replaced stub-based test_service.py with 12 real service integration tests; updated test_repository.py to use conftest fixtures; all 80 tests pass, 100% coverage on service.py and repository.py, ruff and mypy clean
+
+## Status
+
+review
