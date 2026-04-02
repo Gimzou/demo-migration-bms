@@ -1,5 +1,6 @@
 # Local overrides
 *.local.md
+accounts.json
 
 # Python
 __pycache__/
