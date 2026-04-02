@@ -73,31 +73,27 @@ class TestBalanceValidation:
 class TestModelDump:
     """AC 5: model_dump() returns exact expected shape with no aliases."""
 
-    def test_model_dump_returns_correct_keys(self) -> None:
-        account = Account(account_number="001", owner="Ali", balance=500.0)
-        dumped = account.model_dump()
+    def test_model_dump_returns_correct_keys(self, sample_account: Account) -> None:
+        dumped = sample_account.model_dump()
         assert set(dumped.keys()) == {"account_number", "owner", "balance"}
 
-    def test_model_dump_returns_correct_values(self) -> None:
-        account = Account(account_number="001", owner="Ali", balance=500.0)
-        dumped = account.model_dump()
+    def test_model_dump_returns_correct_values(self, sample_account: Account) -> None:
+        dumped = sample_account.model_dump()
         assert dumped == {"account_number": "001", "owner": "Ali", "balance": 500.0}
 
-    def test_model_dump_no_extra_keys(self) -> None:
-        account = Account(account_number="001", owner="Ali", balance=500.0)
-        dumped = account.model_dump()
+    def test_model_dump_no_extra_keys(self, sample_account: Account) -> None:
+        dumped = sample_account.model_dump()
         assert len(dumped) == 3
 
 
 class TestModelRoundTrip:
     """AC 6: model_validate(model_dump()) round-trips without data loss."""
 
-    def test_round_trip_preserves_data(self) -> None:
-        original = Account(account_number="001", owner="Ali", balance=500.0)
-        restored = Account.model_validate(original.model_dump())
-        assert restored.account_number == original.account_number
-        assert restored.owner == original.owner
-        assert restored.balance == original.balance
+    def test_round_trip_preserves_data(self, sample_account: Account) -> None:
+        restored = Account.model_validate(sample_account.model_dump())
+        assert restored.account_number == sample_account.account_number
+        assert restored.owner == sample_account.owner
+        assert restored.balance == sample_account.balance
 
     def test_round_trip_equality(self) -> None:
         original = Account(account_number="042", owner="Beatrice", balance=1234.56)

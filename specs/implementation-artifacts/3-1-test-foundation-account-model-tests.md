@@ -1,6 +1,6 @@
 # Story 3.1: Test Foundation & Account Model Tests
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -18,20 +18,20 @@ so that model validation behavior is provably correct and fixtures are reusable 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Implement shared fixtures in `tests/conftest.py` (AC: 1, 4)
-  - [ ] Add `sample_account` fixture: returns `Account(account_number="001", owner="Ali", balance=500.0)`
-  - [ ] Add `json_file` fixture: accepts `tmp_path: Path`, returns `tmp_path / "accounts.json"`
-  - [ ] Add `populated_repo` fixture: accepts `json_file` + `sample_account`, saves account, returns `JsonFileAccountRepository`
+- [x] Task 1: Implement shared fixtures in `tests/conftest.py` (AC: 1, 4)
+  - [x] Add `sample_account` fixture: returns `Account(account_number="001", owner="Ali", balance=500.0)`
+  - [x] Add `json_file` fixture: accepts `tmp_path: Path`, returns `tmp_path / "accounts.json"`
+  - [x] Add `populated_repo` fixture: accepts `json_file` + `sample_account`, saves account, returns `JsonFileAccountRepository`
 
-- [ ] Task 2: Review `tests/test_model.py` — verify AC coverage (AC: 2, 3)
-  - [ ] Confirm existing tests cover all AC scenarios (they do — see Dev Notes)
-  - [ ] Optionally update tests to use the `sample_account` fixture where it avoids duplication
-  - [ ] Do NOT rewrite from scratch — the file already satisfies all AC requirements
+- [x] Task 2: Review `tests/test_model.py` — verify AC coverage (AC: 2, 3)
+  - [x] Confirm existing tests cover all AC scenarios (they do — see Dev Notes)
+  - [x] Optionally update tests to use the `sample_account` fixture where it avoids duplication
+  - [x] Do NOT rewrite from scratch — the file already satisfies all AC requirements
 
-- [ ] Task 3: Run quality gates (AC: 4, 5)
-  - [ ] `uv run pytest` → all tests pass (coverage report is auto-generated via `addopts`)
-  - [ ] `ruff check src/` → exit code 0
-  - [ ] `mypy --strict src/` → exit code 0
+- [x] Task 3: Run quality gates (AC: 4, 5)
+  - [x] `uv run pytest` → all tests pass (coverage report is auto-generated via `addopts`)
+  - [x] `ruff check src/` → exit code 0
+  - [x] `mypy --strict src/` → exit code 0
 
 ## Dev Notes
 
@@ -156,6 +156,19 @@ claude-sonnet-4-6
 
 ### Debug Log References
 
+None — implementation completed without blockers.
+
 ### Completion Notes List
 
+- Task 1: Replaced the placeholder comment in `tests/conftest.py` with three fully-typed pytest fixtures (`sample_account`, `json_file`, `populated_repo`) as specified in Dev Notes. All fixtures follow `mypy --strict` annotation requirements.
+- Task 2: Reviewed `tests/test_model.py` — all six AC scenarios already covered by Story 1.3 tests. Updated `TestModelDump` and `TestModelRoundTrip` test methods to consume the `sample_account` fixture, eliminating inline `Account(...)` duplication. `test_round_trip_equality` retains its own `Account` since it uses a different test value.
+- Task 3: `uv run pytest` → 88 passed, `bank/model.py` 100% coverage; `ruff check src/` → clean; `mypy --strict src/` → clean.
+
 ### File List
+
+- `tests/conftest.py` — replaced placeholder comment with `sample_account`, `json_file`, and `populated_repo` fixtures
+- `tests/test_model.py` — updated `TestModelDump` and `TestModelRoundTrip` to use `sample_account` fixture
+
+## Change Log
+
+- 2026-04-02: Story 3.1 implemented (claude-sonnet-4-6). Added shared fixtures to `tests/conftest.py`; refactored `test_model.py` to use `sample_account` fixture. All 88 tests pass; `bank/model.py` 100% covered; ruff and mypy clean.
