@@ -37,3 +37,8 @@
 - Tests: 90 passed / 0 failed
 - ACs: 6/6
 **Story complete after 1 iteration(s).**
+
+## 3-4-nfr-gates-linting-typing-coverage — Iteration 1 — Dev
+- Tasks: 5/5
+- Tests written: 0
+- Status: review

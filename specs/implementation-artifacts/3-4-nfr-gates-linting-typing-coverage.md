@@ -1,6 +1,6 @@
 # Story 3.4: NFR Gates — Linting, Typing & Coverage
 
-Status: review
+Status: done
 
 ## Story
 
