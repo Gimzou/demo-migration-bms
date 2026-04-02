@@ -293,15 +293,19 @@ What would you like to do?
                  "needs-rework" = ANY failing tests OR unsatisfied AC OR mypy error
                                   that indicates incorrect behaviour (not just style)
 
-              7. Update the story file:
-                 - "clean":        set Status to "done"
-                 - "needs-rework": set Status to "in-progress"; write all unresolved
+              7. Update files based on outcome:
+                 - "clean":
+                     - Set story file Status to "done"
+                     - In `{sprint_status}`: set `development_status[{story_key}]` = "done";
+                       update `last_updated` = today's date
+                 - "needs-rework": set story file Status to "in-progress"; write all unresolved
                                    issues as a bulleted list under
                                    Dev Agent Record → Debug Log
 
               ## Project context
               - Story file:              {current_story}
               - Implementation artifacts: {implementation_artifacts}
+              - Sprint status:            {sprint_status}
 
               ## Autonomy contract
               Do NOT halt for user input. Auto-fix only what is safe (ruff --fix).
@@ -321,10 +325,6 @@ What would you like to do?
 
         <check if="QA agent return STATUS == 'clean' OR qa_status == 'done'">
           <action>Set `story_done` = true</action>
-          <check if="`{sprint_status}` file exists">
-            <action>Load FULL `{sprint_status}`</action>
-            <action>Update `development_status[{story_key}]` = "done"; update `last_updated` = `{date}`; save</action>
-          </check>
           <action>
             Run: git add -A
             Run: git commit -m "pipeline({story_key}): done after {iteration} iter(s)"

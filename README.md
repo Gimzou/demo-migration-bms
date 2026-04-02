@@ -1,66 +1,169 @@
-# Bank Management System — Java to Python Migration
+# Bank Management System — Java → Python Migration
 
-> **Work in progress**
+Migrating [BankManagementSystem](https://github.com/aljalo/BankManagementSystem) from Java to modern Python, using **Pydantic** for runtime validation and an **AI agent pipeline** (Claude Code + BMad) to drive the entire planning and implementation lifecycle.
 
-This project migrates a [Java Bank Management System](https://github.com/aljalo/BankManagementSystem) to modern Python, using Pydantic for runtime validation. The entire planning and implementation pipeline is driven by AI agents (Claude Code + the BMad method) to explore how far agentic tooling can carry a real codebase migration.
+**3 epics · 13 stories · 90 tests · 100% coverage**
 
-## Current status
+## Quick start
 
-Planning is complete. Implementation of Epic 1 is done; Epics 2 and 3 are in the backlog.
+```bash
+uv sync
+uv run pytest          # 90 tests, 100% coverage
+uv run bank --help     # launch the CLI
+```
 
-| Epic | Scope | Status |
-|------|-------|--------|
-| **Epic 1** — Runnable CLI Foundation | Project scaffold, exception hierarchy, account model, repository layer, CLI scaffold | ✅ Done (5 / 5 stories) |
-| **Epic 2** — Core Banking Operations | BankService protocol & impl, create/deposit/withdraw/list commands | 🔲 Backlog |
-| **Epic 3** — Migration Quality Assurance | Test foundation, service/repo tests, CLI integration tests, NFR gates | 🔲 Backlog |
+## BMAD methodology
 
-Story-level detail is tracked in [`specs/implementation-artifacts/sprint-status.yaml`](specs/implementation-artifacts/sprint-status.yaml).
+The migration is orchestrated by four AI agent personas, each responsible for a distinct phase. Each phase produces a concrete artifact before the next begins.
 
-## What's in the repo
+```mermaid
+flowchart LR
+    A[Java source] --> B[Analyst\nbmad-agent-analyst]
+    B -->|prd.md| C[Architect\nbmad-agent-architect]
+    C -->|architecture.md\nepics.md| D[Scrum Master\nbmad-agent-sm]
+    D -->|story files\nsprint-status.yaml| E[story-pipeline\nDev · QA loop]
+    E --> F[Python codebase\n+ test suite]
+```
+
+### Phase 1 — Analysis (`bmad-agent-analyst`)
+
+**Input:** Java source code (`docs/BankManagementSystem/`)
+**Output:** [`specs/prd.md`](specs/prd.md)
+
+The Analyst reads the Java codebase and extracts all business rules: numeric account number format, non-negative balance invariant, transactional semantics for deposit and withdrawal, duplicate-account prevention. It also flags Java pain points — manual null checks, mutable state, scattered validation — that Pydantic will address structurally.
+
+### Phase 2 — Architecture (`bmad-agent-architect`)
+
+**Input:** `specs/prd.md`
+**Output:** [`specs/architecture.md`](specs/architecture.md) · [`specs/epics.md`](specs/epics.md)
+
+The Architect designs the Python package structure, selects Pydantic `BaseModel` as the core data layer, and defines the three epics. Key technology choices are recorded as Architecture Decision Records (ADRs) in `specs/architecture.md`.
+
+### Phase 3 — Sprint decomposition (`bmad-agent-sm`)
+
+**Input:** `specs/epics.md`
+**Output:** Story files in [`specs/implementation-artifacts/`](specs/implementation-artifacts/) · [`sprint-status.yaml`](specs/implementation-artifacts/sprint-status.yaml)
+
+The Scrum Master breaks each epic into stories with explicit Acceptance Criteria and a technical focus per story (e.g. *"Story 1-3: Account model — Pydantic `BaseModel` with `field_validator` for account number format"*).
+
+### Phase 4 — Implementation (`/story-pipeline`)
+
+**Input:** Story files
+**Output:** Working Python code + passing test suite
+
+Each story is processed by the autonomous Dev → QA loop described below.
+
+## Story pipeline — Dev → QA → Rework
+
+```mermaid
+flowchart TD
+    A([Story: ready-for-dev]) --> B[Dev agent\nAmelia]
+    B -->|story: review| C[QA agent\nQuinn\nruff · mypy · pytest · AC check]
+    C -->|clean ✓| D([Story: done])
+    C -->|needs-rework| B
+    B -->|3rd failure| E([Escalate to user])
+```
+
+**Dev (Amelia)** implements the story and writes `pytest` tests.
+**QA (Quinn)** runs `ruff --fix`, `mypy --strict`, `pytest`, and verifies each Acceptance Criterion explicitly. Returns `clean` or `needs-rework` with labelled issue notes.
+
+The loop auto-commits on every milestone via a `commit-step` hook.
+
+### Trace: Story 2-1 — Create account command
+
+Story 2-1 is a concrete example of the pipeline catching real issues. After iteration 1, QA returned `needs-rework`:
+
+> **AC4 FAIL** — Typer parses `-100.0` as the option flag `-1` before Pydantic validation fires.
+> Fix applied: wrap argument as `Annotated[float, typer.Argument()]`.
+>
+> **AC5 FAIL** — `show-accounts` exits silently; `get_all_accounts()` raises `NotImplementedError`.
+> Fix applied: defer listing to Story 2-4; AC scoped correctly.
+
+Iteration 2 resolved both. QA returned `clean ✓` — 73 tests passing, all 5 ACs satisfied.
+
+Full traces for all three epics: [`specs/audit/`](specs/audit/)
+
+## Pydantic adoption
+
+The migration's core objective is replacing Java's manual, imperative validation with Pydantic's declarative model layer.
+
+### Before — Java `Account.java`
+
+```java
+public Account(String accountNumber, String ownerName, double balance) {
+    if (balance < 0) {
+        throw new IllegalArgumentException("balance cannot be negative");
+    }
+    // No format validation on accountNumber — silent corruption possible
+    this.accountNumber = accountNumber;
+    ...
+}
+```
+
+### After — Python `model.py`
+
+```python
+class Account(BaseModel):
+    account_number: str = Field(min_length=1)
+    owner: str = Field(min_length=1)
+    balance: float = Field(ge=0.0)           # ≥ 0 enforced by Pydantic
+
+    @field_validator("account_number")
+    @classmethod
+    def account_number_must_be_numeric(cls, v: str) -> str:
+        if not v.isdigit():
+            raise ValueError("Account number must be a numeric string (e.g., '001').")
+        return v
+```
+
+What changed:
+
+| Java | Python |
+|------|--------|
+| Manual `if/throw` per field | Declarative `Field(ge=0.0, min_length=1)` |
+| No account number format check | `@field_validator` enforces numeric strings |
+| Mutable object (`deposit()` mutates state) | Immutable — updates via `model_copy(update={...})` |
+| No serialization support | `model_dump()` / `model_validate()` built-in |
+
+## Project structure
 
 ```
 .
-├── .claude/
-│   ├── settings.json          # Claude Code permissions and hook configuration
-│   ├── hooks/
-│   │   └── commit-step.sh     # Auto-commit hook: fires on planning milestones
-│   │                          #   and story status transitions (review / done)
-│   └── skills/                # BMad agent and custom skill definitions loaded at runtime
-├── docs/
-│   └── BankManagementSystem/  # Original Java source (reference input for analysis)
+├── docs/BankManagementSystem/       # Original Java source (reference input for Phase 1)
 ├── specs/
-│   ├── prd.md                 # Product Requirements Document
-│   ├── architecture.md        # Python target architecture & ADRs
-│   ├── epics.md               # Epics and user stories
+│   ├── prd.md                       # Product Requirements Document (Phase 1 output)
+│   ├── architecture.md              # Architecture & ADRs (Phase 2 output)
+│   ├── epics.md                     # Epics & stories (Phase 2 output)
+│   ├── audit/                       # Pipeline execution traces, one file per epic
 │   └── implementation-artifacts/
-│       ├── sprint-status.yaml # Live sprint tracker
-│       └── *.md               # Individual story files
-├── src/bank/                  # Python source package (Epic 1 output)
-├── tests/                     # pytest test suite
-├── pyproject.toml             # Project configuration (uv-managed)
-└── CLAUDE.md                  # Project-level instructions for Claude Code
+│       ├── sprint-status.yaml       # Sprint tracker
+│       └── *.md                     # Individual story files (Phase 3 output)
+├── src/bank/
+│   ├── model.py                     # Account — Pydantic BaseModel
+│   ├── repository.py                # In-memory AccountRepository
+│   ├── service.py                   # BankService protocol + BankServiceImpl
+│   ├── exceptions.py                # Domain exception hierarchy
+│   └── cli.py                       # Typer CLI — create / deposit / withdraw / list
+├── tests/                           # pytest suite — 90 tests, 100% coverage
+├── .claude/
+│   ├── settings.json                # Claude Code permissions & hook configuration
+│   └── skills/                      # BMad agent and pipeline skill definitions
+├── pyproject.toml
+└── CLAUDE.md                        # Project-level instructions for Claude Code
 ```
 
-## Prerequisites
+## Running the CLI
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) — the CLI that orchestrates the work
-- [BMad Method](https://github.com/bmadcode/BMAD-METHOD) — installed via `npx`; provides the agent skills used for planning
+```bash
+# Create an account
+uv run bank create-account 001 "Alice" 500.0
 
-Optional:
-- [`rtk`](https://github.com/contextvibes/rtk) (Rust Token Killer) — a CLI proxy that cuts token usage on dev commands
+# Deposit funds
+uv run bank deposit 001 200.0
 
-## Getting started
+# Withdraw funds
+uv run bank withdraw 001 100.0
 
-1. **Claude Code** — create `./CLAUDE.md` and `.claude/CLAUDE.local.md`, enable WebSearch, and set up the `commit-step` hook.
-2. **BMad** — output folder is `/specs`. For background on the methodology, see [The Official BMad-Method MasterClass](https://www.youtube.com/watch?v=LorEJPrALcg).
-3. **Git** — a `.gitignore` is already in place.
-
-## Migration workflow (BMad agents)
-
-The migration follows three BMad phases, each driven by a dedicated agent persona:
-
-1. **Analysis** (`bmad-agent-analyst`) — Reads the Java source, extracts business rules (minimum balances, ID formats, transactional logic…), and identifies pain points. Produces a Product Requirements Document (`specs/prd.md`).
-2. **Architecture** (`bmad-agent-architect`) — Takes the PRD and designs the Python target: package structure, Pydantic models, dependency choices. Outputs `specs/architecture.md` and `specs/epics.md`.
-3. **Sprint planning** (`bmad-agent-sm`) — Breaks epics into implementation stories with clear acceptance criteria and a technical focus (e.g. *"US #1: Validate transaction input with Pydantic"*). Outputs individual story files and `specs/sprint.yaml`.
-
-Implementation is then driven by the `/story-pipeline` skill, which chains a dev agent (Amelia) and a QA agent (Quinn) per story, auto-committing on each milestone via the `commit-step` hook.
+# List all accounts
+uv run bank show-accounts
+```
